@@ -32,6 +32,7 @@
 #include "ui.h"
 #include "queue.h"
 #include "vice_defs.h"
+#include <stdlib.h>
 
 /* USER CODE END Includes */
 
@@ -196,8 +197,11 @@ void render_board_state(void) {
             /* If the LVGL object doesn't exist yet, spawn it */
             if(visual_pieces[sq64] == NULL) {
                 visual_pieces[sq64] = lv_img_create(parent_panel);
+                if(visual_pieces[sq64] == NULL) {
+					printf("FATAL: LVGL Out of Memory!\n");
+					return;
+				}
                 lv_obj_add_flag(visual_pieces[sq64], LV_OBJ_FLAG_CLICKABLE);
-
                 /* Attach the drag callback, and pass its starting square as user_data */
                 lv_obj_add_event_cb(visual_pieces[sq64], drag_event_cb, LV_EVENT_ALL, (void*)(intptr_t)sq64);
             }
@@ -233,6 +237,47 @@ char * sq64_to_str(int sq64, char *buf) {
     buf[2] = '\0';
 
     return buf;
+}
+/* Returns 1 if the game is over, 0 if the game continues, TODO: this is unnecessary once we add the ai search*/
+int check_game_over(S_BOARD *pos) {
+    S_MOVELIST list[1];
+    GenerateAllMoves(pos, list);
+
+    int legal_moves = 0;
+
+    /* Loop through all generated moves to see if ANY are legal */
+    for(int moveNum = 0; moveNum < list->count; ++moveNum) {
+
+        /* MakeMove returns FALSE if the move leaves the King in check */
+        if(MakeMove(pos, list->moves[moveNum].move)) {
+            /* We found a valid move! The game is not over. */
+            legal_moves++;
+
+            /* CRITICAL: We must undo the test move so we don't corrupt the board! */
+            TakeMove(pos);
+            break;
+        }
+    }
+
+    /* If we found 0 legal moves, the game is over. But who won? */
+    if(legal_moves == 0) {
+
+        /* Ask VICE if the current side's King is under attack by the OPPOSITE side */
+        int InCheck = SqAttacked(pos->KingSq[pos->side], pos->side ^ 1, pos);
+
+        if(InCheck) {
+            if(pos->side == WHITE) {
+                printf("\nBlack wins!\n");
+            } else {
+                printf("\nWhite wins!\n");
+            }
+        } else {
+            printf("\nSTALEMATE! Game is a Draw!\n");
+        }
+        return 1; // Game Over
+    }
+
+    return 0; // Game continues
 }
 void drag_event_cb(lv_event_t * e) {
     lv_obj_t * obj = lv_event_get_target(e);
@@ -275,13 +320,26 @@ void drag_event_cb(lv_event_t * e) {
 
         /* 4. Ask the Engine to process the move */
         if(attempt_human_move(from_sq120, to_sq120)) {
-        	char from_str[3], to_str[3];
-			printf("valid move: %s to %s\n",
-				   sq64_to_str(from_sq64, from_str),
-				   sq64_to_str(to_sq64, to_str));
-        } else {
-        	printf("ignore move\n");
-        }
+			char from_str[3], to_str[3];
+			printf("Valid move: %s to %s\n", sq64_to_str(from_sq64, from_str), sq64_to_str(to_sq64, to_str));
+
+			/* Did the human just checkmate the AI? */
+			if(check_game_over(&engine_board)) {
+				// Optional: You could disable LVGL touches here so the user can't keep playing
+				printf("Game Over!\n");
+			}
+			else {
+				/* AI's Turn */
+				make_dumb_computer_move();
+
+				/* Did the AI just checkmate the human? */
+				if(check_game_over(&engine_board)) {
+					printf("Game Over!\n");
+				}
+			}
+		} else {
+			printf("Ignore move\n");
+		}
         render_board_state();
     }
 }
@@ -378,6 +436,9 @@ int attempt_human_move(int from_sq, int to_sq) {
                 continue; // Move was pseudo-legal but left king in check
             }
 
+            /* ADD THIS: Reset search ply since we aren't using the Alpha-Beta AI yet */
+            engine_board.ply = 0;
+
             // Move was completely legal and has now been made on engine_board!
             Legal = 1;
             break;
@@ -386,21 +447,42 @@ int attempt_human_move(int from_sq, int to_sq) {
 
     return Legal;
 }
+#include <stdlib.h> // Needed for rand()
+
 void make_dumb_computer_move(void) {
     S_MOVELIST list[1];
     GenerateAllMoves(&engine_board, list);
 
-    int move = 0;
+    int legal_moves[256]; // Buffer to store the actual safe moves
+    int legal_count = 0;
 
-    // Just find the first legal move and play it
+    /* 1. Filter the pseudo-legal list into a strictly legal list */
     for(int moveNum = 0; moveNum < list->count; ++moveNum) {
-        move = list->moves[moveNum].move;
+        int move = list->moves[moveNum].move;
 
+        /* If the move is safe, save it and immediately undo it */
         if(MakeMove(&engine_board, move)) {
-            // Found a valid move, and MakeMove automatically updated the board
-            // Break out immediately so we only make one move
-            break;
+            legal_moves[legal_count] = move;
+            legal_count++;
+
+            TakeMove(&engine_board); // Put the piece back!
         }
+    }
+
+    /* 2. Pick a random move from the safe list */
+    if(legal_count > 0) {
+        int random_index = rand() % legal_count;
+        int chosen_move = legal_moves[random_index];
+
+        /* Make the final chosen move for real */
+        MakeMove(&engine_board, chosen_move);
+        engine_board.ply = 0; // Reset ply counter to prevent memory leaks
+
+        /* Optional: Print what the computer did to your terminal */
+        char from_str[3], to_str[3];
+        printf("Computer: %s to %s\n",
+               sq64_to_str(SQ64(FROMSQ(chosen_move)), from_str),
+               sq64_to_str(SQ64(TOSQ(chosen_move)), to_str));
     }
 }
 /* USER CODE END 0 */

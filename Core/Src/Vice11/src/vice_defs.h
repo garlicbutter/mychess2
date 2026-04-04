@@ -103,10 +103,10 @@ typedef struct {
 
 typedef struct {
 
-	int pieces[BRD_SQ_NUM];
-	U64 pawns[3];
+	int pieces[BRD_SQ_NUM]; // The 120-square integer mailbox
+	U64 pawns[3]; // Three 64-bit integers (Bitboards). One holds White pawns, one Black, one both
 
-	int KingSq[2];
+	int KingSq[2]; //nstantly tells the engine where the kings are
 
 	int side;
 	int enPas;
