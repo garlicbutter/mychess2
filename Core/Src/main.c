@@ -210,9 +210,22 @@ int main(void)
 
 //	ui (build from eez studio)
 	ui_init();
-	lv_obj_add_event_cb(objects.test_horse_1, drag_event_cb, LV_EVENT_PRESSING, NULL);
-	lv_obj_add_event_cb(objects.test_horse_2, drag_event_cb, LV_EVENT_PRESSING, NULL);
-	lv_obj_add_event_cb(objects.test_horse_3, drag_event_cb, LV_EVENT_PRESSING, NULL);
+	lv_obj_add_event_cb(objects.bishop_w_1, drag_event_cb, LV_EVENT_PRESSING, NULL);
+	lv_obj_add_event_cb(objects.bishop_w_2, drag_event_cb, LV_EVENT_PRESSING, NULL);
+	lv_obj_add_event_cb(objects.knight_w_1, drag_event_cb, LV_EVENT_PRESSING, NULL);
+	lv_obj_add_event_cb(objects.knight_w_2, drag_event_cb, LV_EVENT_PRESSING, NULL);
+	lv_obj_add_event_cb(objects.rook_w_1, drag_event_cb, LV_EVENT_PRESSING, NULL);
+	lv_obj_add_event_cb(objects.rook_w_2, drag_event_cb, LV_EVENT_PRESSING, NULL);
+	lv_obj_add_event_cb(objects.king_w, drag_event_cb, LV_EVENT_PRESSING, NULL);
+	lv_obj_add_event_cb(objects.queen_w, drag_event_cb, LV_EVENT_PRESSING, NULL);
+	lv_obj_add_event_cb(objects.pawn_w_1, drag_event_cb, LV_EVENT_PRESSING, NULL);
+	lv_obj_add_event_cb(objects.pawn_w_2, drag_event_cb, LV_EVENT_PRESSING, NULL);
+	lv_obj_add_event_cb(objects.pawn_w_3, drag_event_cb, LV_EVENT_PRESSING, NULL);
+	lv_obj_add_event_cb(objects.pawn_w_4, drag_event_cb, LV_EVENT_PRESSING, NULL);
+	lv_obj_add_event_cb(objects.pawn_w_5, drag_event_cb, LV_EVENT_PRESSING, NULL);
+	lv_obj_add_event_cb(objects.pawn_w_6, drag_event_cb, LV_EVENT_PRESSING, NULL);
+	lv_obj_add_event_cb(objects.pawn_w_7, drag_event_cb, LV_EVENT_PRESSING, NULL);
+	lv_obj_add_event_cb(objects.pawn_w_8, drag_event_cb, LV_EVENT_PRESSING, NULL);
 
 
   /* USER CODE END 2 */

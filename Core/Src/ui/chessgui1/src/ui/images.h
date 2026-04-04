@@ -8,6 +8,18 @@ extern "C" {
 #endif
 
 extern const lv_img_dsc_t img_knight_w;
+extern const lv_img_dsc_t img_board;
+extern const lv_img_dsc_t img_bishop_w;
+extern const lv_img_dsc_t img_king_w;
+extern const lv_img_dsc_t img_pawn_w;
+extern const lv_img_dsc_t img_queen_w;
+extern const lv_img_dsc_t img_rook_w;
+extern const lv_img_dsc_t img_bisiop_b;
+extern const lv_img_dsc_t img_king_b;
+extern const lv_img_dsc_t img_knight_b;
+extern const lv_img_dsc_t img_pawn_b;
+extern const lv_img_dsc_t img_queen_b;
+extern const lv_img_dsc_t img_rook_b;
 
 #ifndef EXT_IMG_DESC_T
 #define EXT_IMG_DESC_T
@@ -17,7 +29,7 @@ typedef struct _ext_img_desc_t {
 } ext_img_desc_t;
 #endif
 
-extern const ext_img_desc_t images[1];
+extern const ext_img_desc_t images[13];
 
 #ifdef __cplusplus
 }
