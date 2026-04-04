@@ -58,6 +58,7 @@ osThreadId defaultTaskHandle;
 /* USER CODE BEGIN PV */
 
 osThreadId blinkyTaskHandle;
+TS_StateTypeDef TsState;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -115,11 +116,17 @@ int main(void)
   MX_TIM1_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
+
+//  LCD init code
 	BSP_LCD_Init();
 	BSP_LCD_LayerDefaultInit(0, LCD_FRAME_BUFFER);
 	BSP_LCD_SelectLayer(0);
 	BSP_LCD_DisplayOn();
-	BSP_LCD_Clear(LCD_COLOR_DARKCYAN);
+	BSP_LCD_Clear(LCD_COLOR_WHITE);
+
+//	Touch Screen init code
+	BSP_TS_Init(BSP_LCD_GetXSize(), BSP_LCD_GetYSize());
+
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -495,8 +502,13 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void StartBlinkyTask(void const *argument) {
 	for (;;) {
-		HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-		osDelay(100);
+		BSP_TS_GetState(&TsState);
+		if (TsState.TouchDetected) {
+			HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_SET);
+		} else {
+			HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_RESET);
+		}
+		osDelay(1);
 	}
 }
 /* USER CODE END 4 */
