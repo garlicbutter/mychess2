@@ -49,8 +49,6 @@
 /* Private variables ---------------------------------------------------------*/
 CRC_HandleTypeDef hcrc;
 
-I2C_HandleTypeDef hi2c3;
-
 SPI_HandleTypeDef hspi5;
 
 TIM_HandleTypeDef htim1;
@@ -58,14 +56,12 @@ TIM_HandleTypeDef htim1;
 UART_HandleTypeDef huart1;
 
 osThreadId defaultTaskHandle;
-/* USER CODE BEGIN PV */
-
-osThreadId blinkyTaskHandle;
 osThreadId lvglTaskHandle;
+/* USER CODE BEGIN PV */
 
 TS_StateTypeDef TsState;
 #define BYTES_PER_PIXEL (LV_COLOR_DEPTH / 8)
-static uint8_t buf1[ILI9341_LCD_PIXEL_WIDTH * ILI9341_LCD_PIXEL_HEIGHT / 10 * BYTES_PER_PIXEL];
+static uint8_t imgbuf1[ILI9341_LCD_PIXEL_WIDTH * ILI9341_LCD_PIXEL_HEIGHT / 10 * BYTES_PER_PIXEL];
 
 /* USER CODE END PV */
 
@@ -73,11 +69,11 @@ static uint8_t buf1[ILI9341_LCD_PIXEL_WIDTH * ILI9341_LCD_PIXEL_HEIGHT / 10 * BY
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_CRC_Init(void);
-static void MX_I2C3_Init(void);
 static void MX_SPI5_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_USART1_UART_Init(void);
 void StartDefaultTask(void const * argument);
+void StartLvglTask(void const * argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -85,28 +81,6 @@ void StartDefaultTask(void const * argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void StartBlinkyTask(void const *argument) {
-	for (;;) {
-		BSP_TS_GetState(&TsState);
-		if (TsState.TouchDetected) {
-			HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_SET);
-		} else {
-			HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_RESET);
-		}
-		osDelay(30);
-	}
-}
-void StartLvglTask(void const *argument) {
-	for (;;) {
-		  uint32_t time_till_next = lv_timer_handler();
-
-		  /*If there is nothing to do now, check again a little bit later.*/
-		  if(time_till_next == LV_NO_TIMER_READY) {
-			 time_till_next = LV_DEF_REFR_PERIOD; /*33 ms by default in lv_conf.h*/
-		  }
-		  osDelay(time_till_next); /*Sleep the thread*/
-	}
-}
 void my_flush_cb(lv_display_t * display, const lv_area_t * area, uint8_t * px_map)
 {
     uint32_t flush_width = area->x2 - area->x1 + 1;
@@ -130,6 +104,44 @@ void my_flush_cb(lv_display_t * display, const lv_area_t * area, uint8_t * px_ma
     // CRITICAL: You MUST tell LVGL that you have finished flushing!
     // If you forget this line, LVGL will draw one frame and freeze forever.
     lv_display_flush_ready(display);
+}
+void my_input_read(lv_indev_t * indev, lv_indev_data_t * data)
+{
+    BSP_TS_GetState(&TsState);
+
+    if (TsState.TouchDetected)
+    {
+        data->state = LV_INDEV_STATE_PRESSED;
+        data->point.x = TsState.X;
+        data->point.y = TsState.Y;
+    }
+    else
+    {
+        data->state = LV_INDEV_STATE_RELEASED;
+        /* Note: You do not need to update data->point.x or y here.
+           LVGL is smart enough to remember the last known coordinates
+           internally to handle "click and drag" release events. */
+    }
+}
+void drag_event_cb(lv_event_t * e)
+{
+    /* Get the specific object that triggered the event (your panel) */
+    lv_obj_t * obj = lv_event_get_target(e);
+
+    /* Get the input device (your touchscreen) associated with this event */
+    lv_indev_t * indev = lv_event_get_indev(e);
+    if(indev == NULL) return;
+
+    /* Get the "vector" (how many pixels the finger moved since the last frame) */
+    lv_point_t vect;
+    lv_indev_get_vect(indev, &vect);
+
+    /* Get current coordinates and add the movement vector */
+    lv_coord_t x = lv_obj_get_x(obj) + vect.x;
+    lv_coord_t y = lv_obj_get_y(obj) + vect.y;
+
+    /* Apply the new position */
+    lv_obj_set_pos(obj, x, y);
 }
 /* USER CODE END 0 */
 
@@ -163,31 +175,42 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_CRC_Init();
-  MX_I2C3_Init();
   MX_SPI5_Init();
   MX_TIM1_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
 //  LCD init code
-	BSP_LCD_Init();
+	if (LCD_OK != BSP_LCD_Init()){
+		Error_Handler();
+	}
 	BSP_LCD_LayerDefaultInit(0, LCD_FRAME_BUFFER);
 	BSP_LCD_SelectLayer(0);
 	BSP_LCD_DisplayOn();
 	BSP_LCD_Clear(LCD_COLOR_WHITE);
 
 //	Touch Screen init code
-	BSP_TS_Init(BSP_LCD_GetXSize(), BSP_LCD_GetYSize());
+	if (TS_OK != BSP_TS_Init(BSP_LCD_GetXSize(), BSP_LCD_GetYSize())){
+		Error_Handler();
+	}
 
-//	LVGL (gui)
+//	LVGL init
 	lv_init();
 	lv_tick_set_cb(HAL_GetTick);
+//	LVGL display hook
 	lv_display_t * display1 = lv_display_create(ILI9341_LCD_PIXEL_WIDTH, ILI9341_LCD_PIXEL_HEIGHT);
-	lv_display_set_buffers(display1, buf1, NULL, sizeof(buf1), LV_DISPLAY_RENDER_MODE_PARTIAL);
+	lv_display_set_buffers(display1, imgbuf1, NULL, sizeof(imgbuf1), LV_DISPLAY_RENDER_MODE_PARTIAL);
 	lv_display_set_flush_cb(display1, my_flush_cb);
+
+//	LVGL touchscreen hook (need to call it after display init)
+	lv_indev_t * indev = lv_indev_create();
+	lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
+	lv_indev_set_read_cb(indev, my_input_read);
+
 
 //	ui (build from eez studio)
 	ui_init();
+//	lv_obj_add_event_cb(objects.test_horse, drag_event_cb, LV_EVENT_PRESSING, NULL);
 
 
   /* USER CODE END 2 */
@@ -213,12 +236,12 @@ int main(void)
   osThreadDef(defaultTask, StartDefaultTask, osPriorityIdle, 0, 128);
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
+  /* definition and creation of lvglTask */
+  osThreadDef(lvglTask, StartLvglTask, osPriorityNormal, 0, 4096);
+  lvglTaskHandle = osThreadCreate(osThread(lvglTask), NULL);
+
   /* USER CODE BEGIN RTOS_THREADS */
 	/* add threads, ... */
-	osThreadDef(blinkyTask, StartBlinkyTask, osPriorityNormal, 0, 256);
-	blinkyTaskHandle = osThreadCreate(osThread(blinkyTask), NULL);
-	osThreadDef(lvglTask, StartLvglTask, osPriorityAboveNormal, 0, 1024);
-	lvglTaskHandle = osThreadCreate(osThread(lvglTask), NULL);
 
   /* USER CODE END RTOS_THREADS */
 
@@ -305,54 +328,6 @@ static void MX_CRC_Init(void)
   /* USER CODE BEGIN CRC_Init 2 */
 
   /* USER CODE END CRC_Init 2 */
-
-}
-
-/**
-  * @brief I2C3 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_I2C3_Init(void)
-{
-
-  /* USER CODE BEGIN I2C3_Init 0 */
-
-  /* USER CODE END I2C3_Init 0 */
-
-  /* USER CODE BEGIN I2C3_Init 1 */
-
-  /* USER CODE END I2C3_Init 1 */
-  hi2c3.Instance = I2C3;
-  hi2c3.Init.ClockSpeed = 100000;
-  hi2c3.Init.DutyCycle = I2C_DUTYCYCLE_2;
-  hi2c3.Init.OwnAddress1 = 0;
-  hi2c3.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-  hi2c3.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-  hi2c3.Init.OwnAddress2 = 0;
-  hi2c3.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-  hi2c3.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-  if (HAL_I2C_Init(&hi2c3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Configure Analogue filter
-  */
-  if (HAL_I2CEx_ConfigAnalogFilter(&hi2c3, I2C_ANALOGFILTER_ENABLE) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Configure Digital filter
-  */
-  if (HAL_I2CEx_ConfigDigitalFilter(&hi2c3, 0) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN I2C3_Init 2 */
-
-  /* USER CODE END I2C3_Init 2 */
 
 }
 
@@ -582,9 +557,32 @@ void StartDefaultTask(void const * argument)
   /* USER CODE BEGIN 5 */
 	/* Infinite loop */
 	for (;;) {
-		osDelay(1);
+		osDelay(100);
 	}
   /* USER CODE END 5 */
+}
+
+/* USER CODE BEGIN Header_StartLvglTask */
+/**
+* @brief Function implementing the lvglTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartLvglTask */
+void StartLvglTask(void const * argument)
+{
+  /* USER CODE BEGIN StartLvglTask */
+  /* Infinite loop */
+	for (;;) {
+	  uint32_t time_till_next = lv_timer_handler();
+
+	  /*If there is nothing to do now, check again a little bit later.*/
+	  if(time_till_next == LV_NO_TIMER_READY) {
+		 time_till_next = LV_DEF_REFR_PERIOD; /*33 ms by default in lv_conf.h*/
+	  }
+	  osDelay(time_till_next); /*Sleep the thread*/
+	}
+  /* USER CODE END StartLvglTask */
 }
 
 /**
