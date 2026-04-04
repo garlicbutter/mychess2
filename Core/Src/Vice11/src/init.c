@@ -195,4 +195,6 @@ void AllInit() {
 	printf("InitMvvLva\n");
 	InitPolyBook();
 	printf("InitPolyBook\n");
+
+	printf("AllInit\n");
 }

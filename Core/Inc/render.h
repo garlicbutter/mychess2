@@ -1,0 +1,46 @@
+#ifndef __RENDER_H
+#define __RENDER_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "queue.h"
+
+#include "lvgl/lvgl.h"
+#include "ui.h"
+#include "vice_defs.h"
+
+LV_IMG_DECLARE(img_pawn_w)
+LV_IMG_DECLARE(img_knight_w)
+LV_IMG_DECLARE(img_bishop_w)
+LV_IMG_DECLARE(img_rook_w)
+LV_IMG_DECLARE(img_queen_w)
+LV_IMG_DECLARE(img_king_w)
+LV_IMG_DECLARE(img_pawn_b)
+LV_IMG_DECLARE(img_knight_b)
+LV_IMG_DECLARE(img_bishop_b)
+LV_IMG_DECLARE(img_rook_b)
+LV_IMG_DECLARE(img_queen_b)
+LV_IMG_DECLARE(img_king_b)
+
+void render_init(void);
+void render_board_state(void);
+uint32_t render_timer_handler(void);
+
+void delete_loading_board_spinner(void);
+
+void drag_event_cb(lv_event_t *e);
+void my_flush_cb(lv_display_t *display, const lv_area_t *area, uint8_t *px_map);
+const void* get_sprite(int vice_piece);
+void my_input_read(lv_indev_t *indev, lv_indev_data_t *data);
+void update_debug_terminal(QueueHandle_t queue);
+
+/* Array to track the active LVGL widgets on the 64 visual squares */
+extern lv_obj_t *visual_pieces[64];
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __RENDER_H */

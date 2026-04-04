@@ -50,7 +50,9 @@ void create_screen_main() {
             lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM);
         }
         {
+            // button1
             lv_obj_t *obj = lv_button_create(parent_obj);
+            objects.button1 = obj;
             lv_obj_set_pos(obj, 180, 240);
             lv_obj_set_size(obj, 60, 40);
             {
@@ -67,9 +69,11 @@ void create_screen_main() {
             }
         }
         {
+            // loading_board
             lv_obj_t *obj = lv_spinner_create(parent_obj);
-            lv_obj_set_pos(obj, 194, 292);
-            lv_obj_set_size(obj, 33, 28);
+            objects.loading_board = obj;
+            lv_obj_set_pos(obj, 72, 68);
+            lv_obj_set_size(obj, 96, 104);
         }
     }
     
