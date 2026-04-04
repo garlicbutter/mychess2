@@ -2,17 +2,25 @@
 
 #include "stdio.h"
 #include "vice_defs.h"
-
+#include "cmsis_os.h" // Needed for osDelay
 
 int rootDepth;
 
-static void CheckUp(S_SEARCHINFO *info) {
-	// .. check if time up, or interrupt from GUI
-	if(info->timeset == TRUE && GetTimeMs() > info->stoptime) {
-		info->stopped = TRUE;
-	}
+S_MOVELIST engine_move_lists[MAXDEPTH];
 
-	ReadInput(info);
+static void CheckUp(S_SEARCHINFO *info) {
+	 // .. check if time up, or interrupt from GUI
+	 if(info->timeset == TRUE && GetTimeMs() > info->stoptime) {
+	 	info->stopped = TRUE;
+	 }
+	 /* 1. Force the AI to sleep for 1 RTOS tick (~1 millisecond).
+	           This completely unblocks the CPU and allows the LVGL
+	           task to refresh the screen and spin the loading wheel! */
+	 printf("n: %lu", info->nodes);
+	 osDelay(1);
+
+
+	// ReadInput(info);
 }
 
 static void PickNextMove(int moveNum, S_MOVELIST *list) {
@@ -68,9 +76,9 @@ static void ClearForSearch(S_BOARD *pos, S_SEARCHINFO *info) {
 		}
 	}
 
-	pos->HashTable->overWrite=0;
-	pos->HashTable->hit=0;
-	pos->HashTable->cut=0;
+	// pos->HashTable->overWrite=0;
+	// pos->HashTable->hit=0;
+	// pos->HashTable->cut=0;
 	pos->ply = 0;
 
 	info->stopped = 0;
@@ -83,7 +91,7 @@ static int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *info) {
 
 	ASSERT(CheckBoard(pos));
 	ASSERT(beta>alpha);
-	if(( info->nodes & 2047 ) == 0) {
+	if(( info->nodes & 31 ) == 0) {
 		CheckUp(info);
 	}
 
@@ -109,7 +117,8 @@ static int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *info) {
 		alpha = Score;
 	}
 
-	S_MOVELIST list[1];
+//	S_MOVELIST list[1];
+	S_MOVELIST *list = &engine_move_lists[pos->ply];
     GenerateAllCaps(pos,list);
 
     int MoveNum = 0;
@@ -160,7 +169,7 @@ static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO 
 		// return EvalPosition(pos);
 	}
 
-	if(( info->nodes & 2047 ) == 0) {
+	if(( info->nodes & 31 ) == 0) {
 		CheckUp(info);
 	}
 
@@ -183,10 +192,10 @@ static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO 
 	int Score = -INFINITE;
 	int PvMove = NOMOVE;
 
-	if( ProbeHashEntry(pos, &PvMove, &Score, alpha, beta, depth) == TRUE ) {
-		pos->HashTable->cut++;
-		return Score;
-	}
+	// if( ProbeHashEntry(pos, &PvMove, &Score, alpha, beta, depth) == TRUE ) {
+	// 	pos->HashTable->cut++;
+	// 	return Score;
+	// }
 
 	if( DoNull && !InCheck && pos->ply && (pos->bigPce[pos->side] > 0) && depth >= 4) {
 		MakeNullMove(pos);
@@ -202,7 +211,8 @@ static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO 
 		}
 	}
 
-	S_MOVELIST list[1];
+//	S_MOVELIST list[1];
+	S_MOVELIST *list = &engine_move_lists[pos->ply];
     GenerateAllMoves(pos,list);
 
     int MoveNum = 0;
@@ -254,7 +264,7 @@ static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO 
 						pos->searchKillers[0][pos->ply] = list->moves[MoveNum].move;
 					}
 
-					StoreHashEntry(pos, BestMove, beta, HFBETA, depth);
+					// StoreHashEntry(pos, BestMove, beta, HFBETA, depth);
 
 					return beta;
 				}
@@ -277,16 +287,16 @@ static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO 
 
 	ASSERT(alpha>=OldAlpha);
 
-	if(alpha != OldAlpha) {
-		StoreHashEntry(pos, BestMove, BestScore, HFEXACT, depth);
-	} else {
-		StoreHashEntry(pos, BestMove, alpha, HFALPHA, depth);
-	}
+	// if(alpha != OldAlpha) {
+	// 	StoreHashEntry(pos, BestMove, BestScore, HFEXACT, depth);
+	// } else {
+	// 	StoreHashEntry(pos, BestMove, alpha, HFALPHA, depth);
+	// }
 
 	return alpha;
 }
 
-void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
+int SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
 
 	int bestMove = NOMOVE;
 	int bestScore = -INFINITE;
@@ -315,16 +325,16 @@ void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
 
 			pvMoves = GetPvLine(currentDepth, pos);
 			bestMove = pos->PvArray[0];
-			if(info->GAME_MODE == UCIMODE) {
-				printf("info score cp %d depth %d nodes %ld time %d ",
-					bestScore,currentDepth,info->nodes,GetTimeMs()-info->starttime);
-			} else if(info->GAME_MODE == XBOARDMODE && info->POST_THINKING == TRUE) {
-				printf("%d %d %d %ld ",
-					currentDepth,bestScore,(GetTimeMs()-info->starttime)/10,info->nodes);
-			} else if(info->POST_THINKING == TRUE) {
-				printf("score:%d depth:%d nodes:%ld time:%d(ms) ",
-					bestScore,currentDepth,info->nodes,GetTimeMs()-info->starttime);
-			}
+			// if(info->GAME_MODE == UCIMODE) {
+			// 	printf("info score cp %d depth %d nodes %ld time %d ",
+			// 		bestScore,currentDepth,info->nodes,GetTimeMs()-info->starttime);
+			// } else if(info->GAME_MODE == XBOARDMODE && info->POST_THINKING == TRUE) {
+			// 	printf("%d %d %d %ld ",
+			// 		currentDepth,bestScore,(GetTimeMs()-info->starttime)/10,info->nodes);
+			// } else if(info->POST_THINKING == TRUE) {
+			// 	printf("score:%d depth:%d nodes:%ld time:%d(ms) ",
+			// 		bestScore,currentDepth,info->nodes,GetTimeMs()-info->starttime);
+			// }
 			if(info->GAME_MODE == UCIMODE || info->POST_THINKING == TRUE) {
 				pvMoves = GetPvLine(currentDepth, pos);
 				if(!(info->GAME_MODE == XBOARDMODE)) {
@@ -340,18 +350,19 @@ void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
 			//(info->fhf/info->fh)*100,info->nullCut);
 		}
 	}
+//
+//	if(info->GAME_MODE == UCIMODE) {
+//		printf("bestmove %s\n",PrMove(bestMove));
+//	} else if(info->GAME_MODE == XBOARDMODE) {
+//		printf("move %s\n",PrMove(bestMove));
+//		MakeMove(pos, bestMove);
+//	} else {
+//		printf("\n\n***!! Vice makes move %s !!***\n\n",PrMove(bestMove));
+//		MakeMove(pos, bestMove);
+//		PrintBoard(pos);
+//	}
 
-	if(info->GAME_MODE == UCIMODE) {
-		printf("bestmove %s\n",PrMove(bestMove));
-	} else if(info->GAME_MODE == XBOARDMODE) {
-		printf("move %s\n",PrMove(bestMove));
-		MakeMove(pos, bestMove);
-	} else {
-		printf("\n\n***!! Vice makes move %s !!***\n\n",PrMove(bestMove));
-		MakeMove(pos, bestMove);
-		PrintBoard(pos);
-	}
-
+	return bestMove;
 }
 
 

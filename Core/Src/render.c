@@ -164,7 +164,7 @@ void drag_event_cb(lv_event_t *e) {
 				printf("Game Over!\n");
 			} else {
 				/* AI's Turn */
-				make_dumb_computer_move();
+				engine_make_move();
 
 				/* Did the AI just checkmate the human? */
 				if (check_game_over(&engine_board)) {
@@ -370,8 +370,8 @@ void show_move_markers(int from_sq120) {
 				int rank = to_sq64 / 8;
 
 				/* Calculate pixel coordinates */
-				int pixel_x = file * SQUARE_SIZE + SQUARE_SIZE / 2;
-				int pixel_y = (7 - rank) * SQUARE_SIZE + SQUARE_SIZE / 2;
+				int pixel_x = file * SQUARE_SIZE + SQUARE_SIZE / 2 - 6;
+				int pixel_y = (7 - rank) * SQUARE_SIZE + SQUARE_SIZE / 2 - 4;
 
 				/* Spawn the red dot */
 				if (move_markers[to_sq64] == NULL) {

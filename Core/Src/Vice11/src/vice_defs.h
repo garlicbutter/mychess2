@@ -38,7 +38,7 @@ typedef unsigned long long U64;
 
 #define START_FEN  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
-#define INFINITE 30000
+#define INFINITE 300
 #define ISMATE (INFINITE - MAXDEPTH)
 
 enum { EMPTY, wP, wN, wB, wR, wQ, wK, bP, bN, bB, bR, bQ, bK  };
@@ -309,7 +309,7 @@ extern void TakeNullMove(S_BOARD *pos);
 extern void PerftTest(int depth, S_BOARD *pos);
 
 // search.c
-extern void SearchPosition(S_BOARD *pos, S_SEARCHINFO *info);
+extern int SearchPosition(S_BOARD *pos, S_SEARCHINFO *info);
 
 // misc.c
 extern int GetTimeMs();

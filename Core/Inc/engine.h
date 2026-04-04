@@ -7,7 +7,11 @@ extern "C" {
 
 #include "vice_defs.h"
 
-void make_dumb_computer_move(void);
+void engine_make_move(void);
+
+void make_random_move(void);
+void make_smart_move(void);
+
 int attempt_human_move(int from_sq, int to_sq);
 char* sq64_to_str(int sq64, char *buf);
 int check_game_over(S_BOARD *pos);

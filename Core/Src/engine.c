@@ -3,8 +3,25 @@
 #include "render.h"
 
 S_BOARD engine_board = { 0 };
+static S_SEARCHINFO info[1];
 
-void make_dumb_computer_move(void) {
+void engine_make_move() {
+	static int engine_make_move_printed = 1;
+
+	make_random_move();
+	if (engine_make_move_printed) {
+		printf("move=random\n");
+		engine_make_move_printed = 0;
+	}
+
+//	make_smart_move();
+//	if (engine_make_move_printed) {
+//		printf("move=search\n");
+//		engine_make_move_printed = 0;
+//	}
+}
+
+void make_random_move(void) {
 	S_MOVELIST list[1];
 	GenerateAllMoves(&engine_board, list);
 
@@ -39,6 +56,33 @@ void make_dumb_computer_move(void) {
 				sq64_to_str(SQ64(FROMSQ(chosen_move)), from_str),
 				sq64_to_str(SQ64(TOSQ(chosen_move)), to_str));
 	}
+}
+
+void make_smart_move(void) {
+
+    /* 1. Configure the Search Limits */
+    info->depth = 2;        // Start with 3 half-moves deep. Increase to 4 if it's too fast.
+    info->timeset = TRUE;  // Tell VICE not to stop based on a clock timer
+    info->stoptime = GetTimeMs() + 1000;
+    info->quit = FALSE;
+    info->nodes = 0;        // Reset node counter
+
+    engine_board.ply = 0;   // Reset your ply depth
+
+    /* 2. Run the AI (This will block the CPU until it finishes!) */
+    int best_move = SearchPosition(&engine_board, info);
+
+    /* 3. Execute the best move if one was found */
+    if(best_move != 0) {
+        MakeMove(&engine_board, best_move);
+        engine_board.ply = 0; // Reset ply to prevent memory overflow on next turn
+
+        char from_str[3], to_str[3];
+        printf("AI Played: %s to %s (Searched %ld nodes)\n",
+               sq64_to_str(SQ64(FROMSQ(best_move)), from_str),
+               sq64_to_str(SQ64(TOSQ(best_move)), to_str),
+               info->nodes);
+    }
 }
 
 int attempt_human_move(int from_sq, int to_sq) {
@@ -138,7 +182,7 @@ void init_chess_engine(void) {
 	AllInit(); // VICE's internal lookup table setup
 
 	engine_board.HashTable->pTable = NULL;
-//	InitHashTableKb(engine_board.HashTable, 16);
+	InitHashTableKb(engine_board.HashTable, 1);
 
 	// Load the starting pieces onto the board
 	ParseFen(START_FEN, &engine_board);
