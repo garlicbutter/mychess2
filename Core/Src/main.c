@@ -26,7 +26,9 @@
 #include "stm32f429i_discovery.h"
 #include "stm32f429i_discovery_lcd.h"
 #include "stm32f429i_discovery_ts.h"
-
+#include "string.h"
+#include "lvgl/lvgl.h"
+#include "ui.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -59,7 +61,12 @@ osThreadId defaultTaskHandle;
 /* USER CODE BEGIN PV */
 
 osThreadId blinkyTaskHandle;
+osThreadId lvglTaskHandle;
+
 TS_StateTypeDef TsState;
+#define BYTES_PER_PIXEL (LV_COLOR_DEPTH / 8)
+static uint8_t buf1[ILI9341_LCD_PIXEL_WIDTH * ILI9341_LCD_PIXEL_HEIGHT / 10 * BYTES_PER_PIXEL];
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -73,12 +80,57 @@ static void MX_USART1_UART_Init(void);
 void StartDefaultTask(void const * argument);
 
 /* USER CODE BEGIN PFP */
-void StartBlinkyTask(void const *argument);
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void StartBlinkyTask(void const *argument) {
+	for (;;) {
+		BSP_TS_GetState(&TsState);
+		if (TsState.TouchDetected) {
+			HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_SET);
+		} else {
+			HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_RESET);
+		}
+		osDelay(1);
+	}
+}
+void StartLvglTask(void const *argument) {
+	for (;;) {
+		  uint32_t time_till_next = lv_timer_handler();
+
+		  /*If there is nothing to do now, check again a little bit later.*/
+		  if(time_till_next == LV_NO_TIMER_READY) {
+			 time_till_next = LV_DEF_REFR_PERIOD; /*33 ms by default in lv_conf.h*/
+		  }
+		  osDelay(time_till_next); /*Sleep the thread*/
+	}
+}
+void my_flush_cb(lv_display_t * display, const lv_area_t * area, uint8_t * px_map)
+{
+    uint32_t flush_width = area->x2 - area->x1 + 1;
+    uint32_t flush_height = area->y2 - area->y1 + 1;
+
+
+    uint32_t screen_width = BSP_LCD_GetXSize();
+    uint32_t fb_start_address = LtdcHandler.LayerCfg[0].FBStartAdress;
+    uint8_t * dest_address = (uint8_t *)fb_start_address +
+                             (((area->y1 * screen_width) + area->x1) * BYTES_PER_PIXEL);
+
+    uint8_t * source_address = px_map;
+
+    for(uint32_t y = 0; y < flush_height; y++)
+    {
+        memcpy(dest_address, source_address, (flush_width * BYTES_PER_PIXEL));
+        source_address += (flush_width * BYTES_PER_PIXEL);
+        dest_address += (screen_width * BYTES_PER_PIXEL);
+    }
+
+    // CRITICAL: You MUST tell LVGL that you have finished flushing!
+    // If you forget this line, LVGL will draw one frame and freeze forever.
+    lv_display_flush_ready(display);
+}
 /* USER CODE END 0 */
 
 /**
@@ -127,6 +179,17 @@ int main(void)
 //	Touch Screen init code
 	BSP_TS_Init(BSP_LCD_GetXSize(), BSP_LCD_GetYSize());
 
+//	LVGL (gui)
+	lv_init();
+	lv_tick_set_cb(HAL_GetTick);
+	lv_display_t * display1 = lv_display_create(ILI9341_LCD_PIXEL_WIDTH, ILI9341_LCD_PIXEL_HEIGHT);
+	lv_display_set_buffers(display1, buf1, NULL, sizeof(buf1), LV_DISPLAY_RENDER_MODE_PARTIAL);
+	lv_display_set_flush_cb(display1, my_flush_cb);
+
+//	ui (build from eez studio)
+	ui_init();
+
+
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -154,6 +217,8 @@ int main(void)
 	/* add threads, ... */
 	osThreadDef(blinkyTask, StartBlinkyTask, osPriorityNormal, 0, 128);
 	blinkyTaskHandle = osThreadCreate(osThread(blinkyTask), NULL);
+	osThreadDef(lvglTask, StartLvglTask, osPriorityAboveNormal, 0, 1024);
+	lvglTaskHandle = osThreadCreate(osThread(lvglTask), NULL);
 
   /* USER CODE END RTOS_THREADS */
 
@@ -500,17 +565,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void StartBlinkyTask(void const *argument) {
-	for (;;) {
-		BSP_TS_GetState(&TsState);
-		if (TsState.TouchDetected) {
-			HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_SET);
-		} else {
-			HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_RESET);
-		}
-		osDelay(1);
-	}
-}
+
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */

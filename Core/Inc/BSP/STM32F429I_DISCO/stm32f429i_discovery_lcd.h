@@ -239,6 +239,9 @@ void    BSP_LCD_MspInit(void);
   * @}
   */
 
+extern LTDC_HandleTypeDef LtdcHandler;
+
+
 #ifdef __cplusplus
 }
 #endif
