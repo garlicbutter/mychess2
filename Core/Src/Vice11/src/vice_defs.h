@@ -317,6 +317,7 @@ extern void ReadInput(S_SEARCHINFO *info);
 
 // pvtable.c
 extern void InitHashTable(S_HASHTABLE *table, const int MB);
+extern void InitHashTableKb(S_HASHTABLE *table, const int KB);
 extern void StoreHashEntry(S_BOARD *pos, const int move, int score, const int flags, const int depth);
 extern int ProbeHashEntry(S_BOARD *pos, int *move, int *score, int alpha, int beta, int depth);
 extern int ProbePvMove(const S_BOARD *pos);

@@ -523,6 +523,15 @@
       "alwaysBuild": false,
       "lvglBinaryOutputFormat": 3,
       "lvglDither": false
+    },
+    {
+      "objID": "dc00674e-5217-4bc4-8ee8-318c7c272340",
+      "name": "red_dot",
+      "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAJCAYAAAAGuM1UAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAADPSURBVChTVc+9SgNREMXx32xEMVmJKJjWTrC0kHS+gc/h+/kEthYSFHu7iFXiBwFZ7ljsruwODMw95/yHO2FQyX6q58Rxp2zC9zb47TMxDh+dkzfkVWc/EQ/h620ISaKYLYr6rqhXRf3T9arVZovsllcdUxEnwRIXIaYhpu1sSZz22R5ATpL9saZKDsh/rR8KZYMXrFM2KRus8dx5xfDowmGYX6bmlrhu1Xxkcs/na8VuBCSRTMN8kcpZa1YfbN+xC3IEDMAKe92zie4rff0BRYxINnxp+EAAAAAASUVORK5CYII=",
+      "bpp": 32,
+      "alwaysBuild": false,
+      "lvglBinaryOutputFormat": 3,
+      "lvglDither": false
     }
   ],
   "colors": [],

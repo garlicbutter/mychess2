@@ -137,9 +137,8 @@ int check_game_over(S_BOARD *pos) {
 void init_chess_engine(void) {
 	AllInit(); // VICE's internal lookup table setup
 
-	// Allocate Hash Table (Ensure this size is small enough for your RAM!)
-	//    engine_board.HashTable->pTable = NULL;
-	//    InitHashTable(engine_board.HashTable, 1); // 1 MB or less
+	engine_board.HashTable->pTable = NULL;
+//	InitHashTableKb(engine_board.HashTable, 16);
 
 	// Load the starting pieces onto the board
 	ParseFen(START_FEN, &engine_board);

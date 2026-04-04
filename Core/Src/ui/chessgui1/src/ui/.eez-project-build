@@ -22,6 +22,7 @@
     "ui_image_pawn_w.c",
     "ui_image_queen_b.c",
     "ui_image_queen_w.c",
+    "ui_image_red_dot.c",
     "ui_image_rook_b.c",
     "ui_image_rook_w.c",
     "vars.h"

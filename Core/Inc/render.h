@@ -23,6 +23,7 @@ LV_IMG_DECLARE(img_bishop_b)
 LV_IMG_DECLARE(img_rook_b)
 LV_IMG_DECLARE(img_queen_b)
 LV_IMG_DECLARE(img_king_b)
+LV_IMG_DECLARE(img_red_dot)
 
 void render_init(void);
 void render_board_state(void);
@@ -36,8 +37,12 @@ const void* get_sprite(int vice_piece);
 void my_input_read(lv_indev_t *indev, lv_indev_data_t *data);
 void update_debug_terminal(QueueHandle_t queue);
 
+void clear_move_markers(void);
+void show_move_markers(int from_sq120);
+
 /* Array to track the active LVGL widgets on the 64 visual squares */
 extern lv_obj_t *visual_pieces[64];
+extern lv_obj_t * move_markers[64];
 
 #ifdef __cplusplus
 }

@@ -7,6 +7,8 @@
 #define SQUARE_SIZE 30 // Assuming your resized 30x30 pieces
 
 lv_obj_t *visual_pieces[64] = { NULL };
+lv_obj_t *move_markers[64] = { NULL };
+
 static uint8_t imgbuf1[ILI9341_LCD_PIXEL_WIDTH * ILI9341_LCD_PIXEL_HEIGHT / 10
 		* BYTES_PER_PIXEL];
 
@@ -29,13 +31,13 @@ void render_init(void) {
 	lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
 	lv_indev_set_read_cb(indev, my_input_read);
 
-
 //	ui (build from eez studio)
 	ui_init();
 
 //	add component callbacks
-	if(objects.test_button != NULL) {
-		lv_obj_add_event_cb(objects.test_button, test_button_callback, LV_EVENT_ALL, NULL);
+	if (objects.test_button != NULL) {
+		lv_obj_add_event_cb(objects.test_button, test_button_callback,
+				LV_EVENT_ALL, NULL);
 	}
 }
 
@@ -92,8 +94,21 @@ void drag_event_cb(lv_event_t *e) {
 	lv_obj_t *obj = lv_event_get_target(e);
 	lv_event_code_t code = lv_event_get_code(e);
 
-	if (code == LV_EVENT_PRESSING) {
-		/* Move the widget with your finger */
+	if (code == LV_EVENT_PRESSED) {
+		/* --- FINGER TOUCH DOWN --- */
+
+		/* 1. Zoom the piece to 150% (45x45) */
+		lv_img_set_zoom(obj, 384);
+
+		/* 2. Bring the piece to the absolute foreground so it overlaps adjacent pieces */
+		lv_obj_move_foreground(obj);
+
+		/* 3. Get the starting square and show the available moves */
+		int from_sq64 = (int) (intptr_t) lv_event_get_user_data(e);
+		show_move_markers(SQ120(from_sq64));
+
+	} else if (code == LV_EVENT_PRESSING) {
+		/* --- FINGER DRAGGING --- */
 		lv_indev_t *indev = lv_event_get_indev(e);
 		if (indev == NULL)
 			return;
@@ -103,7 +118,13 @@ void drag_event_cb(lv_event_t *e) {
 		lv_coord_t x = lv_obj_get_x(obj) + vect.x;
 		lv_coord_t y = lv_obj_get_y(obj) + vect.y;
 		lv_obj_set_pos(obj, x, y);
-	} else if (code == LV_EVENT_RELEASED) {
+	}
+
+	else if (code == LV_EVENT_RELEASED) {
+		/* 1. Shrink piece back to normal 100% size */
+		lv_img_set_zoom(obj, 256);
+		clear_move_markers();
+
 		/* 1. Retrieve the original starting square from the object's user_data */
 		int from_sq64 = (int) (intptr_t) lv_event_get_user_data(e);
 		int from_sq120 = SQ120(from_sq64);
@@ -151,7 +172,7 @@ void drag_event_cb(lv_event_t *e) {
 				}
 			}
 		} else {
-			printf("Ignore move\n");
+			printf("Illigal Move\n");
 		}
 		render_board_state();
 	}
@@ -319,3 +340,58 @@ void test_button_callback(lv_event_t *e) {
 		printf("reset clicked!\n");
 	}
 }
+
+/* Wipes all red dots from the board */
+void clear_move_markers(void) {
+	for (int i = 0; i < 64; i++) {
+		if (move_markers[i] != NULL) {
+			lv_obj_del(move_markers[i]); /* Safe to delete directly, they aren't the drag target */
+			move_markers[i] = NULL;
+		}
+	}
+}
+
+/* Asks VICE for legal moves for ONE piece, and draws dots on the targets */
+void show_move_markers(int from_sq120) {
+	S_MOVELIST list[1];
+	GenerateAllMoves(&engine_board, list);
+
+	for (int moveNum = 0; moveNum < list->count; ++moveNum) {
+		int move = list->moves[moveNum].move;
+
+		/* If this move belongs to the piece we just touched */
+		if (FROMSQ(move) == from_sq120) {
+
+			/* Test if the move is actually legal (doesn't leave King in check) */
+			if (MakeMove(&engine_board, move)) {
+
+				int to_sq64 = SQ64(TOSQ(move));
+				int file = to_sq64 % 8;
+				int rank = to_sq64 / 8;
+
+				/* Calculate pixel coordinates */
+				int pixel_x = file * SQUARE_SIZE + SQUARE_SIZE / 2;
+				int pixel_y = (7 - rank) * SQUARE_SIZE + SQUARE_SIZE / 2;
+
+				/* Spawn the red dot */
+				if (move_markers[to_sq64] == NULL) {
+					move_markers[to_sq64] = lv_img_create(objects.chessboard);
+					lv_img_set_src(move_markers[to_sq64], &img_red_dot);
+
+					/* Center it in the square (Assuming your red dot sprite is 30x30 with a small dot in the middle.
+					 If it's smaller, you may need to add an offset here to center it perfectly) */
+					lv_obj_set_pos(move_markers[to_sq64], pixel_x, pixel_y);
+
+					/* CRITICAL: Tell LVGL to ignore touches on the red dot,
+					 otherwise it blocks you from dropping the piece on that square! */
+					lv_obj_clear_flag(move_markers[to_sq64],
+							LV_OBJ_FLAG_CLICKABLE);
+				}
+
+				/* Undo the test move! */
+				TakeMove(&engine_board);
+			}
+		}
+	}
+}
+

@@ -66,6 +66,27 @@ void InitHashTable(S_HASHTABLE *table, const int MB) {
 	
 }
 
+void InitHashTableKb(S_HASHTABLE *table, const int KB) {
+	
+	int HashSize = 1024 * KB;
+    table->numEntries = HashSize / sizeof(S_HASHENTRY);
+    table->numEntries -= 2;
+	
+	if(table->pTable!=NULL) {
+		free(table->pTable);
+	}
+		
+    table->pTable = (S_HASHENTRY *) malloc(table->numEntries * sizeof(S_HASHENTRY));
+	if(table->pTable == NULL) {
+		printf("HashAllocFailed,trying,%dKB...\n",KB/2);
+		InitHashTableKb(table,KB/2);
+	} else {
+		ClearHashTable(table);
+		printf("HashTable:%d entries\n",table->numEntries);
+	}
+	
+}
+
 int ProbeHashEntry(S_BOARD *pos, int *move, int *score, int alpha, int beta, int depth) {
 
 	int index = pos->posKey % pos->HashTable->numEntries;
