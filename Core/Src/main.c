@@ -93,7 +93,7 @@ void StartBlinkyTask(void const *argument) {
 		} else {
 			HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_RESET);
 		}
-		osDelay(1);
+		osDelay(30);
 	}
 }
 void StartLvglTask(void const *argument) {
@@ -210,12 +210,12 @@ int main(void)
 
   /* Create the thread(s) */
   /* definition and creation of defaultTask */
-  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 4096);
+  osThreadDef(defaultTask, StartDefaultTask, osPriorityIdle, 0, 128);
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
 	/* add threads, ... */
-	osThreadDef(blinkyTask, StartBlinkyTask, osPriorityNormal, 0, 128);
+	osThreadDef(blinkyTask, StartBlinkyTask, osPriorityNormal, 0, 256);
 	blinkyTaskHandle = osThreadCreate(osThread(blinkyTask), NULL);
 	osThreadDef(lvglTask, StartLvglTask, osPriorityAboveNormal, 0, 1024);
 	lvglTaskHandle = osThreadCreate(osThread(lvglTask), NULL);

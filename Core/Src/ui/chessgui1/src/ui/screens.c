@@ -31,13 +31,23 @@ void create_screen_main() {
         lv_obj_t *parent_obj = obj;
         {
             lv_obj_t *obj = lv_label_create(parent_obj);
-            lv_obj_set_pos(obj, 95, 107);
-            lv_obj_set_size(obj, LV_PCT(89), LV_SIZE_CONTENT);
-            lv_label_set_text(obj, "Loading");
+            lv_obj_set_pos(obj, 356, 232);
+            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+            lv_label_set_text(obj, "Hello, world!");
         }
         {
             lv_obj_t *obj = lv_spinner_create(parent_obj);
-            lv_obj_set_pos(obj, 80, 145);
+            lv_obj_set_pos(obj, 40, 42);
+            lv_obj_set_size(obj, 80, 80);
+        }
+        {
+            lv_obj_t *obj = lv_spinner_create(parent_obj);
+            lv_obj_set_pos(obj, 130, 122);
+            lv_obj_set_size(obj, 80, 80);
+        }
+        {
+            lv_obj_t *obj = lv_spinner_create(parent_obj);
+            lv_obj_set_pos(obj, 40, 192);
             lv_obj_set_size(obj, 80, 80);
         }
     }
