@@ -210,7 +210,9 @@ int main(void)
 
 //	ui (build from eez studio)
 	ui_init();
-//	lv_obj_add_event_cb(objects.test_horse, drag_event_cb, LV_EVENT_PRESSING, NULL);
+	lv_obj_add_event_cb(objects.test_horse_1, drag_event_cb, LV_EVENT_PRESSING, NULL);
+	lv_obj_add_event_cb(objects.test_horse_2, drag_event_cb, LV_EVENT_PRESSING, NULL);
+	lv_obj_add_event_cb(objects.test_horse_3, drag_event_cb, LV_EVENT_PRESSING, NULL);
 
 
   /* USER CODE END 2 */
