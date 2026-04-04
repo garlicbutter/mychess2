@@ -68,6 +68,32 @@ TS_StateTypeDef TsState;
 #define BYTES_PER_PIXEL (LV_COLOR_DEPTH / 8)
 static uint8_t imgbuf1[ILI9341_LCD_PIXEL_WIDTH * ILI9341_LCD_PIXEL_HEIGHT / 10 * BYTES_PER_PIXEL];
 QueueHandle_t print_queue;
+const void * get_sprite(int vice_piece);
+
+S_BOARD engine_board;
+#define SQUARE_SIZE 30 // Assuming your resized 30x30 pieces
+
+LV_IMG_DECLARE(img_pawn_w);
+LV_IMG_DECLARE(img_knight_w);
+LV_IMG_DECLARE(img_bishop_w);
+LV_IMG_DECLARE(img_rook_w);
+LV_IMG_DECLARE(img_queen_w);
+LV_IMG_DECLARE(img_king_w);
+LV_IMG_DECLARE(img_pawn_b);
+LV_IMG_DECLARE(img_knight_b);
+LV_IMG_DECLARE(img_bishop_b);
+LV_IMG_DECLARE(img_rook_b);
+LV_IMG_DECLARE(img_queen_b);
+LV_IMG_DECLARE(img_king_b);
+
+/* Array to track the active LVGL widgets on the 64 visual squares */
+lv_obj_t * visual_pieces[64] = {NULL};
+
+void render_board_state(void);
+
+void drag_event_cb(lv_event_t * e);
+void make_dumb_computer_move(void);
+int attempt_human_move(int from_sq, int to_sq);
 
 /* USER CODE END PV */
 
@@ -88,6 +114,25 @@ void StartChessTask(void const * argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+const void * get_sprite(int vice_piece) {
+    switch(vice_piece) {
+        case wP: return &img_pawn_w;
+        case wN: return &img_knight_w;
+        case wB: return &img_bishop_w;
+        case wR: return &img_rook_w;
+        case wQ: return &img_queen_w;
+        case wK: return &img_king_w;
+
+        case bP: return &img_pawn_b;
+        case bN: return &img_knight_b;
+        case bB: return &img_bishop_b;
+        case bR: return &img_rook_b;
+        case bQ: return &img_queen_b;
+        case bK: return &img_king_b;
+
+        default: return NULL;
+    }
+}
 void my_flush_cb(lv_display_t * display, const lv_area_t * area, uint8_t * px_map)
 {
     uint32_t flush_width = area->x2 - area->x1 + 1;
@@ -130,30 +175,117 @@ void my_input_read(lv_indev_t * indev, lv_indev_data_t * data)
            internally to handle "click and drag" release events. */
     }
 }
-void drag_event_cb(lv_event_t * e)
-{
-    /* Get the specific object that triggered the event (your panel) */
-    lv_obj_t * obj = lv_event_get_target(e);
+void render_board_state(void) {
+    lv_obj_t * parent_panel = objects.chessboard;
 
-    /* Get the input device (your touchscreen) associated with this event */
-    lv_indev_t * indev = lv_event_get_indev(e);
-    if(indev == NULL) return;
+    for(int sq64 = 0; sq64 < 64; sq64++) {
 
-    /* Get the "vector" (how many pixels the finger moved since the last frame) */
-    lv_point_t vect;
-    lv_indev_get_vect(indev, &vect);
+        /* Ask VICE what piece is on this square */
+        int sq120 = SQ120(sq64);
+        int engine_piece = engine_board.pieces[sq120];
 
-    /* Get current coordinates and add the movement vector */
-    lv_coord_t x = lv_obj_get_x(obj) + vect.x;
-    lv_coord_t y = lv_obj_get_y(obj) + vect.y;
+        /* Calculate pixel coordinates. (Inverting Y so Rank 1 is at the bottom) */
+        int file = sq64 % 8;
+        int rank = sq64 / 8;
+        int pixel_x = file * SQUARE_SIZE;
+        int pixel_y = (7 - rank) * SQUARE_SIZE;
 
-    /* Apply the new position */
-    lv_obj_set_pos(obj, x, y);
+        /* If there is a piece here according to VICE */
+        if(engine_piece != EMPTY && engine_piece != OFFBOARD) {
+
+            /* If the LVGL object doesn't exist yet, spawn it */
+            if(visual_pieces[sq64] == NULL) {
+                visual_pieces[sq64] = lv_img_create(parent_panel);
+                lv_obj_add_flag(visual_pieces[sq64], LV_OBJ_FLAG_CLICKABLE);
+
+                /* Attach the drag callback, and pass its starting square as user_data */
+                lv_obj_add_event_cb(visual_pieces[sq64], drag_event_cb, LV_EVENT_ALL, (void*)(intptr_t)sq64);
+            }
+
+            /* Update the sprite image (handles pawn promotions automatically!) */
+            lv_img_set_src(visual_pieces[sq64], get_sprite(engine_piece));
+
+            /* Snap it to the correct pixel grid location */
+            lv_obj_set_pos(visual_pieces[sq64], pixel_x, pixel_y);
+        }
+        /* If VICE says this square is empty */
+        else {
+            /* If an LVGL piece is still lingering here, delete it from RAM */
+        	if(visual_pieces[sq64] != NULL) {
+				/* CRITICAL: Use the async version to prevent Use-After-Free crashes! */
+				lv_obj_del_async(visual_pieces[sq64]);
+				visual_pieces[sq64] = NULL;
+			}
+        }
+    }
 }
-#include "ui.h"
+char * sq64_to_str(int sq64, char *buf) {
+    if(sq64 < 0 || sq64 > 63) {
+        buf[0] = '-'; buf[1] = '-'; buf[2] = '\0';
+        return buf;
+    }
 
-#include "ui.h"
-#include <string.h> // Needed for strncpy
+    int file = sq64 % 8;
+    int rank = sq64 / 8;
+
+    buf[0] = 'a' + file;
+    buf[1] = '1' + rank;
+    buf[2] = '\0';
+
+    return buf;
+}
+void drag_event_cb(lv_event_t * e) {
+    lv_obj_t * obj = lv_event_get_target(e);
+    lv_event_code_t code = lv_event_get_code(e);
+
+    if(code == LV_EVENT_PRESSING) {
+        /* Move the widget with your finger */
+        lv_indev_t * indev = lv_event_get_indev(e);
+        if(indev == NULL) return;
+
+        lv_point_t vect;
+        lv_indev_get_vect(indev, &vect);
+        lv_coord_t x = lv_obj_get_x(obj) + vect.x;
+        lv_coord_t y = lv_obj_get_y(obj) + vect.y;
+        lv_obj_set_pos(obj, x, y);
+    }
+    else if(code == LV_EVENT_RELEASED) {
+        /* 1. Retrieve the original starting square from the object's user_data */
+        int from_sq64 = (int)(intptr_t)lv_event_get_user_data(e);
+        int from_sq120 = SQ120(from_sq64);
+
+        /* 2. Calculate where the finger dropped the piece */
+        lv_coord_t drop_x = lv_obj_get_x(obj) + (SQUARE_SIZE / 2);
+        lv_coord_t drop_y = lv_obj_get_y(obj) + (SQUARE_SIZE / 2);
+
+        /* Convert pixel coordinates to Chess File (0-7) and Rank (0-7) */
+        /* Note: LVGL Y=0 is the TOP of the screen (Rank 8), so we invert Y */
+        int target_file = drop_x / SQUARE_SIZE;
+        int target_rank = 7 - (drop_y / SQUARE_SIZE);
+
+        /* Keep the drop within the 8x8 boundaries */
+        if(target_file < 0) target_file = 0;
+        if(target_file > 7) target_file = 7;
+        if(target_rank < 0) target_rank = 0;
+        if(target_rank > 7) target_rank = 7;
+
+        /* 3. Convert target to VICE format */
+        int to_sq64 = (target_rank * 8) + target_file;
+        int to_sq120 = SQ120(to_sq64);
+
+        /* 4. Ask the Engine to process the move */
+        if(attempt_human_move(from_sq120, to_sq120)) {
+        	char from_str[3], to_str[3];
+			printf("valid move: %s to %s\n",
+				   sq64_to_str(from_sq64, from_str),
+				   sq64_to_str(to_sq64, to_str));
+        } else {
+        	printf("ignore move\n");
+        }
+        render_board_state();
+    }
+}
+
 
 void update_debug_terminal(void) {
     if(print_queue == NULL || objects.debug_terminal == NULL) return;
@@ -210,6 +342,64 @@ void update_debug_terminal(void) {
 
             /* Now update LVGL safely */
             lv_textarea_set_text(objects.debug_terminal, safe_buffer);
+            lv_obj_scroll_to_y(objects.debug_terminal, LV_COORD_MAX, LV_ANIM_OFF); // scroll to end immediately (prevent cursor bouncing back to top)
+        }
+    }
+}
+void init_chess_engine(void) {
+    AllInit(); // VICE's internal lookup table setup
+
+    // Allocate Hash Table (Ensure this size is small enough for your RAM!)
+//    engine_board.HashTable->pTable = NULL;
+//    InitHashTable(engine_board.HashTable, 1); // 1 MB or less
+
+    // Load the starting pieces onto the board
+    ParseFen(START_FEN, &engine_board);
+    render_board_state();
+}
+int attempt_human_move(int from_sq, int to_sq) {
+    S_MOVELIST list[1];
+    GenerateAllMoves(&engine_board, list);
+
+    int move = 0;
+    int Legal = 0;
+
+    // Loop through all generated moves
+    for(int moveNum = 0; moveNum < list->count; ++moveNum) {
+
+        move = list->moves[moveNum].move;
+
+        // Check if the generated move matches where you dropped the piece
+        if(FROMSQ(move) == from_sq && TOSQ(move) == to_sq) {
+//        	TODO: handle promotion
+
+            // Try to make the move (VICE checks if it leaves King in check here)
+            if(!MakeMove(&engine_board, move))  {
+                continue; // Move was pseudo-legal but left king in check
+            }
+
+            // Move was completely legal and has now been made on engine_board!
+            Legal = 1;
+            break;
+        }
+    }
+
+    return Legal;
+}
+void make_dumb_computer_move(void) {
+    S_MOVELIST list[1];
+    GenerateAllMoves(&engine_board, list);
+
+    int move = 0;
+
+    // Just find the first legal move and play it
+    for(int moveNum = 0; moveNum < list->count; ++moveNum) {
+        move = list->moves[moveNum].move;
+
+        if(MakeMove(&engine_board, move)) {
+            // Found a valid move, and MakeMove automatically updated the board
+            // Break out immediately so we only make one move
+            break;
         }
     }
 }
@@ -280,23 +470,6 @@ int main(void)
 
 //	ui (build from eez studio)
 	ui_init();
-	lv_obj_add_event_cb(objects.bishop_w_1, drag_event_cb, LV_EVENT_PRESSING, NULL);
-	lv_obj_add_event_cb(objects.bishop_w_2, drag_event_cb, LV_EVENT_PRESSING, NULL);
-	lv_obj_add_event_cb(objects.knight_w_1, drag_event_cb, LV_EVENT_PRESSING, NULL);
-	lv_obj_add_event_cb(objects.knight_w_2, drag_event_cb, LV_EVENT_PRESSING, NULL);
-	lv_obj_add_event_cb(objects.rook_w_1, drag_event_cb, LV_EVENT_PRESSING, NULL);
-	lv_obj_add_event_cb(objects.rook_w_2, drag_event_cb, LV_EVENT_PRESSING, NULL);
-	lv_obj_add_event_cb(objects.king_w, drag_event_cb, LV_EVENT_PRESSING, NULL);
-	lv_obj_add_event_cb(objects.queen_w, drag_event_cb, LV_EVENT_PRESSING, NULL);
-	lv_obj_add_event_cb(objects.pawn_w_1, drag_event_cb, LV_EVENT_PRESSING, NULL);
-	lv_obj_add_event_cb(objects.pawn_w_2, drag_event_cb, LV_EVENT_PRESSING, NULL);
-	lv_obj_add_event_cb(objects.pawn_w_3, drag_event_cb, LV_EVENT_PRESSING, NULL);
-	lv_obj_add_event_cb(objects.pawn_w_4, drag_event_cb, LV_EVENT_PRESSING, NULL);
-	lv_obj_add_event_cb(objects.pawn_w_5, drag_event_cb, LV_EVENT_PRESSING, NULL);
-	lv_obj_add_event_cb(objects.pawn_w_6, drag_event_cb, LV_EVENT_PRESSING, NULL);
-	lv_obj_add_event_cb(objects.pawn_w_7, drag_event_cb, LV_EVENT_PRESSING, NULL);
-	lv_obj_add_event_cb(objects.pawn_w_8, drag_event_cb, LV_EVENT_PRESSING, NULL);
-
 
   /* USER CODE END 2 */
 
@@ -327,11 +500,16 @@ int main(void)
   lvglTaskHandle = osThreadCreate(osThread(lvglTask), NULL);
 
   /* definition and creation of chessTask */
-  osThreadDef(chessTask, StartChessTask, osPriorityBelowNormal, 0, 4096);
+  osThreadDef(chessTask, StartChessTask, osPriorityBelowNormal, 0, 128);
   chessTaskHandle = osThreadCreate(osThread(chessTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
 	/* add threads, ... */
+//   init_chess_engine();
+//  printf("init_chess_engine\n");
+  AllInit();
+  ParseFen(START_FEN, &engine_board);
+  render_board_state();
 
   /* USER CODE END RTOS_THREADS */
 
@@ -704,12 +882,10 @@ void StartLvglTask(void const * argument)
 void StartChessTask(void const * argument)
 {
   /* USER CODE BEGIN StartChessTask */
-  printf("StartChessTask\n");
-  AllInit();
-  printf("AllInit OK\n");
   /* Infinite loop */
   for(;;)
   {
+//	  Uci_Loop(pos, info);
     osDelay(100);
   }
   /* USER CODE END StartChessTask */

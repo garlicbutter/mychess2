@@ -14,7 +14,7 @@ extern const lv_img_dsc_t img_king_w;
 extern const lv_img_dsc_t img_pawn_w;
 extern const lv_img_dsc_t img_queen_w;
 extern const lv_img_dsc_t img_rook_w;
-extern const lv_img_dsc_t img_bisiop_b;
+extern const lv_img_dsc_t img_bishop_b;
 extern const lv_img_dsc_t img_king_b;
 extern const lv_img_dsc_t img_knight_b;
 extern const lv_img_dsc_t img_pawn_b;

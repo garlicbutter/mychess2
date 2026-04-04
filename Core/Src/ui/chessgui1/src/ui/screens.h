@@ -17,23 +17,9 @@ enum ScreensEnum {
 
 typedef struct _objects_t {
     lv_obj_t *main;
-    lv_obj_t *bishop_w_1;
-    lv_obj_t *bishop_w_2;
-    lv_obj_t *rook_w_1;
-    lv_obj_t *rook_w_2;
-    lv_obj_t *knight_w_1;
-    lv_obj_t *knight_w_2;
-    lv_obj_t *king_w;
-    lv_obj_t *queen_w;
-    lv_obj_t *pawn_w_1;
-    lv_obj_t *pawn_w_2;
-    lv_obj_t *pawn_w_3;
-    lv_obj_t *pawn_w_4;
-    lv_obj_t *pawn_w_5;
-    lv_obj_t *pawn_w_6;
-    lv_obj_t *pawn_w_7;
-    lv_obj_t *pawn_w_8;
+    lv_obj_t *chessboard;
     lv_obj_t *debug_terminal;
+    lv_obj_t *test_button;
 } objects_t;
 
 extern objects_t objects;

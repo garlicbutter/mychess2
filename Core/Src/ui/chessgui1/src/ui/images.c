@@ -8,7 +8,7 @@ const ext_img_desc_t images[13] = {
     { "pawn_w", &img_pawn_w },
     { "queen_w", &img_queen_w },
     { "rook_w", &img_rook_w },
-    { "bisiop_b", &img_bisiop_b },
+    { "bishop_b", &img_bishop_b },
     { "king_b", &img_king_b },
     { "knight_b", &img_knight_b },
     { "pawn_b", &img_pawn_b },
