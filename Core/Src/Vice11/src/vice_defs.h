@@ -4,6 +4,12 @@
 #include "stdlib.h"
 #include "stdio.h"
 
+/* Hijack standard memory functions and route them to FreeRTOS */
+#include "FreeRTOS.h"
+#define malloc  pvPortMalloc
+#define free    vPortFree
+
+
 // #define DEBUG
 
 #define MAX_HASH 1024
@@ -26,9 +32,9 @@ typedef unsigned long long U64;
 #define NAME "Vice 1.1"
 #define BRD_SQ_NUM 120
 
-#define MAXGAMEMOVES 2048
+#define MAXGAMEMOVES 256 // originally 2048, TODO: see how much I can afford
 #define MAXPOSITIONMOVES 256
-#define MAXDEPTH 64
+#define MAXDEPTH 4 // originally 64, TODO: see how deep I can go on this MCU
 
 #define START_FEN  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 

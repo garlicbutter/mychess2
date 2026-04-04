@@ -31,6 +31,7 @@
 #include "lvgl/lvgl.h"
 #include "ui.h"
 #include "queue.h"
+#include "vice_defs.h"
 
 /* USER CODE END Includes */
 
@@ -60,6 +61,7 @@ UART_HandleTypeDef huart1;
 
 osThreadId defaultTaskHandle;
 osThreadId lvglTaskHandle;
+osThreadId chessTaskHandle;
 /* USER CODE BEGIN PV */
 
 TS_StateTypeDef TsState;
@@ -78,6 +80,7 @@ static void MX_TIM1_Init(void);
 static void MX_USART1_UART_Init(void);
 void StartDefaultTask(void const * argument);
 void StartLvglTask(void const * argument);
+void StartChessTask(void const * argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -322,6 +325,10 @@ int main(void)
   /* definition and creation of lvglTask */
   osThreadDef(lvglTask, StartLvglTask, osPriorityNormal, 0, 4096);
   lvglTaskHandle = osThreadCreate(osThread(lvglTask), NULL);
+
+  /* definition and creation of chessTask */
+  osThreadDef(chessTask, StartChessTask, osPriorityBelowNormal, 0, 4096);
+  chessTaskHandle = osThreadCreate(osThread(chessTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
 	/* add threads, ... */
@@ -671,21 +678,7 @@ void StartDefaultTask(void const * argument)
 void StartLvglTask(void const * argument)
 {
   /* USER CODE BEGIN StartLvglTask */
-	printf("StartLvglTask1\n");
-	printf("StartLvglTask2\n");
-	printf("StartLvglTask3\n");
-	printf("StartLvglTask4\n");
-	printf("StartLvglTask5\n");
-	printf("StartLvglTask6\n");
-	printf("StartLvglTask7\n");
-	printf("StartLvglTask8\n");
-	printf("StartLvglTask9\n");
-	printf("StartLvglTask10\n");
-	printf("StartLvglTask11\n");
-	printf("StartLvglTask12\n");
-	printf("StartLvglTask13\n");
-	printf("StartLvglTask14\n");
-	printf("StartLvglTask15\n");
+	printf("StartLvglTask\n");
   /* Infinite loop */
 	for (;;) {
 		update_debug_terminal();
@@ -699,6 +692,27 @@ void StartLvglTask(void const * argument)
 	  osDelay(time_till_next); /*Sleep the thread*/
 	}
   /* USER CODE END StartLvglTask */
+}
+
+/* USER CODE BEGIN Header_StartChessTask */
+/**
+* @brief Function implementing the chessTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartChessTask */
+void StartChessTask(void const * argument)
+{
+  /* USER CODE BEGIN StartChessTask */
+  printf("StartChessTask\n");
+  AllInit();
+  printf("AllInit OK\n");
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(100);
+  }
+  /* USER CODE END StartChessTask */
 }
 
 /**

@@ -1,4 +1,4 @@
-#include "defs.h"
+#include "vice_defs.h"
 #include "polykeys.h"
 
 typedef struct {

@@ -1,6 +1,6 @@
 // makemove.c
 
-#include "defs.h"
+#include "vice_defs.h"
 #include "stdio.h"
 
 #define HASH_PCE(pce,sq) (pos->posKey ^= (PieceKeys[(pce)][(sq)]))

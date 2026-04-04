@@ -1,6 +1,6 @@
 // perft.c
 
-#include "defs.h"
+#include "vice_defs.h"
 #include "stdio.h"
 
 long leafNodes;

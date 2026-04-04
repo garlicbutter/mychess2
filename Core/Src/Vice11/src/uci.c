@@ -1,7 +1,7 @@
 // uci.c
 
 #include "stdio.h"
-#include "defs.h"
+#include "vice_defs.h"
 #include "string.h"
 
 #define INPUTBUFFER 400 * 6

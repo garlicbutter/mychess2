@@ -1,7 +1,7 @@
 // board.c
 
 #include "stdio.h"
-#include "defs.h"
+#include "vice_defs.h"
 
 int PceListOk(const S_BOARD *pos) {
 	int pce = wP;

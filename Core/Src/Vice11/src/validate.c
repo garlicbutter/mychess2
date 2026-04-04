@@ -1,6 +1,6 @@
 // validate.c
 
-#include "defs.h"
+#include "vice_defs.h"
 #include "stdio.h"
 #include "string.h"
 

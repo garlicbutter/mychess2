@@ -1,7 +1,7 @@
 // vice.c
 
 #include "stdio.h"
-#include "defs.h"
+#include "vice_defs.h"
 #include "stdlib.h"
 #include "string.h"
 

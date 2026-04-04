@@ -1,7 +1,7 @@
 // misc.c
 
 #include "stdio.h"
-#include "defs.h"
+#include "vice_defs.h"
 
 #ifdef WIN32
 #include "windows.h"

@@ -1,4 +1,4 @@
-#include "defs.h"
+#include "vice_defs.h"
 #include "polykeys.h"
 
 const U64 Random64Poly[781] = {

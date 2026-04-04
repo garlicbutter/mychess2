@@ -1,7 +1,7 @@
 // search.c
 
 #include "stdio.h"
-#include "defs.h"
+#include "vice_defs.h"
 
 
 int rootDepth;

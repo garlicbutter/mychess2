@@ -1,6 +1,6 @@
 // init.c
 
-#include "defs.h"
+#include "vice_defs.h"
 #include "stdio.h"
 #include "stdlib.h"
 
@@ -182,10 +182,17 @@ void InitSq120To64() {
 
 void AllInit() {
 	InitSq120To64();
+	printf("InitSq120To64\n");
 	InitBitMasks();
+	printf("InitBitMasks\n");
 	InitHashKeys();
+	printf("InitHashKeys\n");
 	InitFilesRanksBrd();
+	printf("InitFilesRanksBrd\n");
 	InitEvalMasks();
+	printf("InitEvalMasks\n");
 	InitMvvLva();
+	printf("InitMvvLva\n");
 	InitPolyBook();
+	printf("InitPolyBook\n");
 }

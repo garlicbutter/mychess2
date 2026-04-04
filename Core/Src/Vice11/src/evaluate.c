@@ -1,7 +1,7 @@
 // evaluate.c
 
 #include "stdio.h"
-#include "defs.h"
+#include "vice_defs.h"
 
 const int PawnIsolated = -10;
 const int PawnPassed[8] = { 0, 5, 10, 20, 35, 60, 100, 200 }; 
