@@ -33,6 +33,7 @@ typedef struct _objects_t {
     lv_obj_t *pawn_w_6;
     lv_obj_t *pawn_w_7;
     lv_obj_t *pawn_w_8;
+    lv_obj_t *debug_terminal;
 } objects_t;
 
 extern objects_t objects;

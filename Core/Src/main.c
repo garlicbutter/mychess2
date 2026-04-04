@@ -23,12 +23,15 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "stdio.h"
 #include "stm32f429i_discovery.h"
 #include "stm32f429i_discovery_lcd.h"
 #include "stm32f429i_discovery_ts.h"
 #include "string.h"
 #include "lvgl/lvgl.h"
 #include "ui.h"
+#include "queue.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -62,6 +65,7 @@ osThreadId lvglTaskHandle;
 TS_StateTypeDef TsState;
 #define BYTES_PER_PIXEL (LV_COLOR_DEPTH / 8)
 static uint8_t imgbuf1[ILI9341_LCD_PIXEL_WIDTH * ILI9341_LCD_PIXEL_HEIGHT / 10 * BYTES_PER_PIXEL];
+QueueHandle_t print_queue;
 
 /* USER CODE END PV */
 
@@ -142,6 +146,69 @@ void drag_event_cb(lv_event_t * e)
 
     /* Apply the new position */
     lv_obj_set_pos(obj, x, y);
+}
+#include "ui.h"
+
+#include "ui.h"
+#include <string.h> // Needed for strncpy
+
+void update_debug_terminal(void) {
+    if(print_queue == NULL || objects.debug_terminal == NULL) return;
+
+    char buf[64];
+    char c;
+    int i = 0;
+
+    /* Pull up to 63 characters per frame out of the RTOS queue */
+    while(i < 63 && xQueueReceive(print_queue, &c, 0) == pdTRUE) {
+        buf[i++] = c;
+    }
+
+    if(i > 0) {
+        buf[i] = '\0';
+
+        /* 1. Append the new characters */
+        lv_textarea_add_text(objects.debug_terminal, buf);
+
+        /* 2. Get the current text and count the lines */
+        const char * text = lv_textarea_get_text(objects.debug_terminal);
+        int newline_count = 0;
+        const char * ptr = text;
+
+        while(*ptr) {
+            if(*ptr == '\n') {
+                newline_count++;
+            }
+            ptr++;
+        }
+
+        /* 3. If we exceed 10 lines, chop off the oldest ones safely */
+        if(newline_count > 10) {
+            int lines_to_remove = newline_count - 10;
+            ptr = text;
+
+            /* Move pointer forward until we pass the old lines */
+            while(lines_to_remove > 0 && *ptr) {
+                if(*ptr == '\n') {
+                    lines_to_remove--;
+                }
+                ptr++;
+            }
+
+            /* * THE FIX: Use a static buffer. It stays in global memory,
+             * so it won't crash your FreeRTOS stack, and it completely
+             * prevents LVGL from reading from memory it is trying to free.
+             */
+            static char safe_buffer[500];
+
+            /* Copy the pruned text into our safe holding area */
+            strncpy(safe_buffer, ptr, sizeof(safe_buffer) - 1);
+            safe_buffer[sizeof(safe_buffer) - 1] = '\0'; // Guarantee null termination
+
+            /* Now update LVGL safely */
+            lv_textarea_set_text(objects.debug_terminal, safe_buffer);
+        }
+    }
 }
 /* USER CODE END 0 */
 
@@ -244,6 +311,7 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_QUEUES */
 	/* add queues, ... */
+	print_queue = xQueueCreate(512, sizeof(char));
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
@@ -556,6 +624,22 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+/* Intercept printf and send characters to our RTOS queue */
+int _write(int file, char *ptr, int len)
+{
+	//	VCP (Virtual Com Port is not avaible) for my DISCO board.
+	//	because is comes with ST-LINK V2. so... printf doens't work via UART
+//	HAL_UART_Transmit(&huart1, (uint8_t *)ptr, len, HAL_MAX_DELAY);
+
+    if(print_queue != NULL) {
+        for(int i = 0; i < len; i++) {
+            /* Send char to queue. Wait max 5 ticks if the buffer is full. */
+            xQueueSend(print_queue, &ptr[i], 5);
+        }
+    }
+    return len;
+}
+
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -587,8 +671,25 @@ void StartDefaultTask(void const * argument)
 void StartLvglTask(void const * argument)
 {
   /* USER CODE BEGIN StartLvglTask */
+	printf("StartLvglTask1\n");
+	printf("StartLvglTask2\n");
+	printf("StartLvglTask3\n");
+	printf("StartLvglTask4\n");
+	printf("StartLvglTask5\n");
+	printf("StartLvglTask6\n");
+	printf("StartLvglTask7\n");
+	printf("StartLvglTask8\n");
+	printf("StartLvglTask9\n");
+	printf("StartLvglTask10\n");
+	printf("StartLvglTask11\n");
+	printf("StartLvglTask12\n");
+	printf("StartLvglTask13\n");
+	printf("StartLvglTask14\n");
+	printf("StartLvglTask15\n");
   /* Infinite loop */
 	for (;;) {
+		update_debug_terminal();
+
 	  uint32_t time_till_next = lv_timer_handler();
 
 	  /*If there is nothing to do now, check again a little bit later.*/
