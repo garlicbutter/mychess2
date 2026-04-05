@@ -1,3 +1,4 @@
+#include "stdlib.h"
 #include "main.h"
 #include "engine.h"
 #include "render.h"
@@ -29,27 +30,41 @@ int engine_make_move() {
 // very crude AI
 int make_random_move(void) {
     S_MOVELIST list[1];
+    int legal_moves[256]; // Max possible chess moves in any position is ~218
+    int legal_count = 0;
 
-	// first, try capture
-    GenerateAllCaps(&engine_board, list);
-    for (int i = 0; i < list->count; ++i) {
-        int move = list->moves[i].move;
-        if (MoveExists(&engine_board, move)) {
-            engine_board.ply = 0; /* CRITICAL: Reset search ply so we don't overflow RAM */
-            return move;
-        }
-    }
-
-    // or just play the first legal move it found
     GenerateAllMoves(&engine_board, list);
     for (int i = 0; i < list->count; ++i) {
         int move = list->moves[i].move;
-        if (MoveExists(&engine_board, move)) {
-            engine_board.ply = 0; /* CRITICAL: Reset search ply */
-            return move;
+
+        if (MakeMove(&engine_board, move)) {
+            // The move is strictly legal! Undo it so we don't change the board state yet.
+            TakeMove(&engine_board);
+            legal_moves[legal_count++] = move;
         }
     }
-    return NOMOVE;
+    if (legal_count == 0) {
+        return 0;
+    }
+
+    // --- PRIORITIZE CAPTURES ---
+    int legal_captures[256];
+    int capture_count = 0;
+    srand(HAL_GetTick()); // randomize seed
+
+    for (int i = 0; i < legal_count; ++i) {
+        if (CAPTURED(legal_moves[i]) != 0) {
+            legal_captures[capture_count++] = legal_moves[i];
+        }
+    }
+
+    // If there are captures available, pick a random one!
+    if (capture_count > 0) {
+        int random_index = rand() % capture_count;
+        return legal_captures[random_index];
+    }
+    int random_index = rand() % legal_count;
+    return legal_moves[random_index];
 }
 
 int make_smart_move(void) {
