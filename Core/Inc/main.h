@@ -31,6 +31,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "stdbool.h"
 #include "stm32f429i_discovery.h"
 #include "stm32f429i_discovery_lcd.h"
 #include "stm32f429i_discovery_ts.h"
@@ -38,7 +39,7 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-
+extern volatile bool is_ai_thinking;
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/

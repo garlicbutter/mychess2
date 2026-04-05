@@ -26,12 +26,16 @@ LV_IMG_DECLARE(img_queen_b)
 LV_IMG_DECLARE(img_king_b)
 LV_IMG_DECLARE(img_red_dot)
 
+
+
 void render_init(void);
 void render_board_state(void);
 uint32_t render_timer_handler(void);
 
 void update_memory_bars(void);
-void delete_loading_board_spinner(void);
+
+void show_loading_spinner(void);
+void hide_loading_spinner(void);
 
 void drag_event_cb(lv_event_t *e);
 void my_flush_cb(lv_display_t *display, const lv_area_t *area, uint8_t *px_map);
@@ -42,9 +46,8 @@ void update_debug_terminal(StreamBufferHandle_t stream);
 void clear_move_markers(void);
 void show_move_markers(int from_sq120);
 
-/* Array to track the active LVGL widgets on the 64 visual squares */
-extern lv_obj_t *visual_pieces[64];
-extern lv_obj_t * move_markers[64];
+extern osThreadId registerChessTaskHandle;
+extern osMutexId lvgl_mutex;
 
 #ifdef __cplusplus
 }

@@ -6,13 +6,14 @@
 #define BYTES_PER_PIXEL (LV_COLOR_DEPTH / 8)
 #define SQUARE_SIZE 30 // Assuming your resized 30x30 pieces
 
-lv_obj_t *visual_pieces[64] = { NULL };
-lv_obj_t *move_markers[64] = { NULL };
+osThreadId registerChessTaskHandle = NULL;
 
 static uint8_t imgbuf1[ILI9341_LCD_PIXEL_WIDTH * ILI9341_LCD_PIXEL_HEIGHT / 10
 		* BYTES_PER_PIXEL];
 
 // local stuff
+static lv_obj_t *visual_pieces[64]= { NULL };
+static lv_obj_t * move_markers[64]= { NULL };
 static void test_button_callback(lv_event_t *e);
 
 void render_init(void) {
@@ -91,12 +92,17 @@ void render_board_state(void) {
 }
 
 void drag_event_cb(lv_event_t *e) {
+	// CRITICAL: Ignore touches if the AI is currently calculating.
+	// Otherwise, you'll corrupt the board state mid-search!
+	if (is_ai_thinking)
+		return;
+
 	lv_obj_t *obj = lv_event_get_target(e);
 	lv_event_code_t code = lv_event_get_code(e);
 
 	if (code == LV_EVENT_PRESSED) {
 		/* --- FINGER TOUCH DOWN --- */
-		
+
 		int from_sq64 = (int) (intptr_t) lv_event_get_user_data(e);
 		lv_img_set_zoom(obj, 384);
 		show_move_markers(SQ120(from_sq64));
@@ -143,27 +149,25 @@ void drag_event_cb(lv_event_t *e) {
 			printf("You: %s to %s\n", sq64_to_str(from_sq64, from_str),
 					sq64_to_str(to_sq64, to_str));
 
+			render_board_state();
+
 			/* Did the human just checkmate the AI? */
 			if (check_game_over(&engine_board)) {
 				printf("Game Over!\n");
 			} else {
 				/* AI's Turn */
-				int chosen_move = engine_make_move();
-				/* Optional: Print what the computer did to your terminal */
-				printf("AI: %s to %s\n",
-						sq64_to_str(SQ64(FROMSQ(chosen_move)), from_str),
-						sq64_to_str(SQ64(TOSQ(chosen_move)), to_str));
-
-				/* Did the AI just checkmate the human? */
-				if (check_game_over(&engine_board)) {
-					printf("Game Over!\n");
+				if (registerChessTaskHandle != NULL) {
+					is_ai_thinking = true;
+					osSignalSet(registerChessTaskHandle, 0x01);
 				}
 			}
-		} else if (from_sq120 != to_sq120) {
-			printf("Illigal Move\n");
-		}
 
-		render_board_state();
+		} else {
+			if (from_sq120 != to_sq120) {
+				printf("Illigal Move\n");
+			}
+			render_board_state();
+		}
 	}
 }
 
@@ -235,55 +239,57 @@ void my_input_read(lv_indev_t *indev, lv_indev_data_t *data) {
 }
 
 void update_debug_terminal(StreamBufferHandle_t stream) {
-    if (stream == NULL || objects.debug_terminal == NULL)
-        return;
+	if (stream == NULL || objects.debug_terminal == NULL)
+		return;
 
-    char buf[64];
+	char buf[64];
 
-    size_t bytes_received = xStreamBufferReceive(stream, buf, sizeof(buf) - 1, 0);
+	size_t bytes_received = xStreamBufferReceive(stream, buf, sizeof(buf) - 1,
+			0);
 
-    if (bytes_received > 0) {
-        /* Guarantee null termination based on exactly how many bytes we grabbed */
-        buf[bytes_received] = '\0';
+	if (bytes_received > 0) {
+		/* Guarantee null termination based on exactly how many bytes we grabbed */
+		buf[bytes_received] = '\0';
 
-        lv_textarea_add_text(objects.debug_terminal, buf);
-        const char *text = lv_textarea_get_text(objects.debug_terminal);
-        int newline_count = 0;
-        const char *ptr = text;
+		lv_textarea_add_text(objects.debug_terminal, buf);
+		const char *text = lv_textarea_get_text(objects.debug_terminal);
+		int newline_count = 0;
+		const char *ptr = text;
 
-        while (*ptr) {
-            if (*ptr == '\n') {
-                newline_count++;
-            }
-            ptr++;
-        }
+		while (*ptr) {
+			if (*ptr == '\n') {
+				newline_count++;
+			}
+			ptr++;
+		}
 
-        /* 3. If we exceed 10 lines, chop off the oldest ones safely */
-        if (newline_count > 10) {
-            int lines_to_remove = newline_count - 10;
-            ptr = text;
+		/* 3. If we exceed 10 lines, chop off the oldest ones safely */
+		if (newline_count > 10) {
+			int lines_to_remove = newline_count - 10;
+			ptr = text;
 
-            /* Move pointer forward until we pass the old lines */
-            while (lines_to_remove > 0 && *ptr) {
-                if (*ptr == '\n') {
-                    lines_to_remove--;
-                }
-                ptr++;
-            }
+			/* Move pointer forward until we pass the old lines */
+			while (lines_to_remove > 0 && *ptr) {
+				if (*ptr == '\n') {
+					lines_to_remove--;
+				}
+				ptr++;
+			}
 
-            /* THE FIX: Use a static buffer. It stays in global memory,
-             * so it won't crash your FreeRTOS stack, and it completely
-             * prevents LVGL from reading from memory it is trying to free.
-             */
-            static char safe_buffer[500];
-            strncpy(safe_buffer, ptr, sizeof(safe_buffer) - 1);
-            safe_buffer[sizeof(safe_buffer) - 1] = '\0'; // Guarantee null termination
+			/* THE FIX: Use a static buffer. It stays in global memory,
+			 * so it won't crash your FreeRTOS stack, and it completely
+			 * prevents LVGL from reading from memory it is trying to free.
+			 */
+			static char safe_buffer[500];
+			strncpy(safe_buffer, ptr, sizeof(safe_buffer) - 1);
+			safe_buffer[sizeof(safe_buffer) - 1] = '\0'; // Guarantee null termination
 
-            /* Now update LVGL safely */
-            lv_textarea_set_text(objects.debug_terminal, safe_buffer);
-            lv_obj_scroll_to_y(objects.debug_terminal, LV_COORD_MAX, LV_ANIM_OFF);
-        }
-    }
+			/* Now update LVGL safely */
+			lv_textarea_set_text(objects.debug_terminal, safe_buffer);
+			lv_obj_scroll_to_y(objects.debug_terminal, LV_COORD_MAX,
+					LV_ANIM_OFF);
+		}
+	}
 }
 
 // returns remaining sleeping time in ms
@@ -296,27 +302,33 @@ uint32_t render_timer_handler() {
 	return time_till_next;
 }
 
-void delete_loading_board_spinner(void) {
-	if (objects.loading_board != NULL) {
-		lv_obj_del(objects.loading_board);
-		objects.loading_board = NULL;
-	}
+
+void show_loading_spinner(void) {
+    if (objects.loading_board != NULL) {
+        lv_obj_clear_flag(objects.loading_board, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+void hide_loading_spinner(void) {
+    if (objects.loading_board != NULL) {
+        lv_obj_add_flag(objects.loading_board, LV_OBJ_FLAG_HIDDEN);
+    }
 }
 
 void update_memory_bars(void) {
-    uint32_t total_ram = configTOTAL_HEAP_SIZE;
-    uint32_t free_ram = xPortGetFreeHeapSize();
-    uint32_t used_ram = total_ram - free_ram;
+	uint32_t total_ram = configTOTAL_HEAP_SIZE;
+	uint32_t free_ram = xPortGetFreeHeapSize();
+	uint32_t used_ram = total_ram - free_ram;
 
-    int ram_percent = (used_ram * 100) / total_ram;
-    if(objects.bar_rtos != NULL) {
-        lv_bar_set_value(objects.bar_rtos, ram_percent, LV_ANIM_OFF);
-    }
+	int ram_percent = (used_ram * 100) / total_ram;
+	if (objects.bar_rtos != NULL) {
+		lv_bar_set_value(objects.bar_rtos, ram_percent, LV_ANIM_OFF);
+	}
 
-    if(objects.label_rtos != NULL) {
-        lv_label_set_text_fmt(objects.label_rtos, "rtos:%d%%(%lu/%luKB)",
-                              ram_percent, used_ram / 1024, total_ram / 1024);
-    }
+	if (objects.label_rtos != NULL) {
+		lv_label_set_text_fmt(objects.label_rtos, "rtos:%d%%(%lu/%luKB)",
+				ram_percent, used_ram / 1024, total_ram / 1024);
+	}
 }
 
 void test_button_callback(lv_event_t *e) {

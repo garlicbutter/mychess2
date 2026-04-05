@@ -38,7 +38,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+osMutexDef(lvgl_mutex_def); // CMSIS macro to define the mutex structure
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -62,6 +62,8 @@ osThreadId chessTaskHandle;
 
 StreamBufferHandle_t print_stream;
 SemaphoreHandle_t printf_mutex;
+volatile bool is_ai_thinking = false;
+osMutexId lvgl_mutex;
 
 /* USER CODE END PV */
 
@@ -72,9 +74,9 @@ static void MX_CRC_Init(void);
 static void MX_SPI5_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_USART1_UART_Init(void);
-void StartDefaultTask(void const * argument);
-void StartLvglTask(void const * argument);
-void StartChessTask(void const * argument);
+void StartDefaultTask(void const *argument);
+void StartLvglTask(void const *argument);
+void StartChessTask(void const *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -86,39 +88,38 @@ void StartChessTask(void const * argument);
 /* USER CODE END 0 */
 
 /**
-  * @brief  The application entry point.
-  * @retval int
-  */
-int main(void)
-{
+ * @brief  The application entry point.
+ * @retval int
+ */
+int main(void) {
 
-  /* USER CODE BEGIN 1 */
+	/* USER CODE BEGIN 1 */
 
-  /* USER CODE END 1 */
+	/* USER CODE END 1 */
 
-  /* MCU Configuration--------------------------------------------------------*/
+	/* MCU Configuration--------------------------------------------------------*/
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+	HAL_Init();
 
-  /* USER CODE BEGIN Init */
+	/* USER CODE BEGIN Init */
 
-  /* USER CODE END Init */
+	/* USER CODE END Init */
 
-  /* Configure the system clock */
-  SystemClock_Config();
+	/* Configure the system clock */
+	SystemClock_Config();
 
-  /* USER CODE BEGIN SysInit */
+	/* USER CODE BEGIN SysInit */
 
-  /* USER CODE END SysInit */
+	/* USER CODE END SysInit */
 
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_CRC_Init();
-  MX_SPI5_Init();
-  MX_TIM1_Init();
-  MX_USART1_UART_Init();
-  /* USER CODE BEGIN 2 */
+	/* Initialize all configured peripherals */
+	MX_GPIO_Init();
+	MX_CRC_Init();
+	MX_SPI5_Init();
+	MX_TIM1_Init();
+	MX_USART1_UART_Init();
+	/* USER CODE BEGIN 2 */
 
 //  LCD init code
 	if (LCD_OK != BSP_LCD_Init()) {
@@ -136,407 +137,396 @@ int main(void)
 
 	render_init();
 
-  /* USER CODE END 2 */
+	/* USER CODE END 2 */
 
-  /* USER CODE BEGIN RTOS_MUTEX */
+	/* USER CODE BEGIN RTOS_MUTEX */
 	/* add mutexes, ... */
-  /* USER CODE END RTOS_MUTEX */
+	/* USER CODE END RTOS_MUTEX */
 
-  /* USER CODE BEGIN RTOS_SEMAPHORES */
+	/* USER CODE BEGIN RTOS_SEMAPHORES */
 	/* add semaphores, ... */
 	printf_mutex = xSemaphoreCreateMutex();
-  /* USER CODE END RTOS_SEMAPHORES */
+	lvgl_mutex = osMutexCreate(osMutex(lvgl_mutex_def));
+	/* USER CODE END RTOS_SEMAPHORES */
 
-  /* USER CODE BEGIN RTOS_TIMERS */
+	/* USER CODE BEGIN RTOS_TIMERS */
 	/* start timers, add new ones, ... */
-  /* USER CODE END RTOS_TIMERS */
+	/* USER CODE END RTOS_TIMERS */
 
-  /* USER CODE BEGIN RTOS_QUEUES */
+	/* USER CODE BEGIN RTOS_QUEUES */
 	/* add queues, ... */
 	print_stream = xStreamBufferCreate(512, 1);
 	if (print_stream == NULL) {
 		Error_Handler();
 	}
-  /* USER CODE END RTOS_QUEUES */
+	/* USER CODE END RTOS_QUEUES */
 
-  /* Create the thread(s) */
-  /* definition and creation of defaultTask */
-  osThreadDef(defaultTask, StartDefaultTask, osPriorityIdle, 0, 512);
-  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
+	/* Create the thread(s) */
+	/* definition and creation of defaultTask */
+	osThreadDef(defaultTask, StartDefaultTask, osPriorityIdle, 0, 512);
+	defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
-  /* definition and creation of lvglTask */
-  osThreadDef(lvglTask, StartLvglTask, osPriorityNormal, 0, 2048);
-  lvglTaskHandle = osThreadCreate(osThread(lvglTask), NULL);
+	/* definition and creation of lvglTask */
+	osThreadDef(lvglTask, StartLvglTask, osPriorityNormal, 0, 2048);
+	lvglTaskHandle = osThreadCreate(osThread(lvglTask), NULL);
 
-  /* definition and creation of chessTask */
-  osThreadDef(chessTask, StartChessTask, osPriorityAboveNormal, 0, 8192);
-  chessTaskHandle = osThreadCreate(osThread(chessTask), NULL);
+	/* definition and creation of chessTask */
+	osThreadDef(chessTask, StartChessTask, osPriorityAboveNormal, 0, 8192);
+	chessTaskHandle = osThreadCreate(osThread(chessTask), NULL);
 
-  /* USER CODE BEGIN RTOS_THREADS */
+	/* USER CODE BEGIN RTOS_THREADS */
 	/* add threads, ... */
-  if (defaultTaskHandle == NULL) {
-        Error_Handler(); // Trap the CPU here so you know it failed
-    }
-  if (lvglTaskHandle == NULL) {
-        Error_Handler(); // Trap the CPU here so you know it failed
-    }
-  if (chessTaskHandle == NULL) {
-        Error_Handler(); // Trap the CPU here so you know it failed
-    }
-  /* USER CODE END RTOS_THREADS */
-
-  /* Start scheduler */
-  osKernelStart();
-
-  /* We should never get here as control is now taken by the scheduler */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-	while (1) {
-    /* USER CODE END WHILE */
-
-    /* USER CODE BEGIN 3 */
+	if (defaultTaskHandle == NULL) {
+		Error_Handler(); // Trap the CPU here so you know it failed
 	}
-  /* USER CODE END 3 */
+	if (lvglTaskHandle == NULL) {
+		Error_Handler(); // Trap the CPU here so you know it failed
+	}
+	if (chessTaskHandle == NULL) {
+		Error_Handler(); // Trap the CPU here so you know it failed
+	}
+
+//  register task handle
+	registerChessTaskHandle = chessTaskHandle;
+	/* USER CODE END RTOS_THREADS */
+
+	/* Start scheduler */
+	osKernelStart();
+
+	/* We should never get here as control is now taken by the scheduler */
+
+	/* Infinite loop */
+	/* USER CODE BEGIN WHILE */
+	while (1) {
+		/* USER CODE END WHILE */
+
+		/* USER CODE BEGIN 3 */
+	}
+	/* USER CODE END 3 */
 }
 
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
-void SystemClock_Config(void)
-{
-  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
-  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+ * @brief System Clock Configuration
+ * @retval None
+ */
+void SystemClock_Config(void) {
+	RCC_OscInitTypeDef RCC_OscInitStruct = { 0 };
+	RCC_ClkInitTypeDef RCC_ClkInitStruct = { 0 };
 
-  /** Configure the main internal regulator output voltage
-  */
-  __HAL_RCC_PWR_CLK_ENABLE();
-  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE3);
+	/** Configure the main internal regulator output voltage
+	 */
+	__HAL_RCC_PWR_CLK_ENABLE();
+	__HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE3);
 
-  /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 4;
-  RCC_OscInitStruct.PLL.PLLN = 72;
-  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = 3;
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-  {
-    Error_Handler();
-  }
+	/** Initializes the RCC Oscillators according to the specified parameters
+	 * in the RCC_OscInitTypeDef structure.
+	 */
+	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+	RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+	RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+	RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+	RCC_OscInitStruct.PLL.PLLM = 4;
+	RCC_OscInitStruct.PLL.PLLN = 72;
+	RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+	RCC_OscInitStruct.PLL.PLLQ = 3;
+	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+		Error_Handler();
+	}
 
-  /** Initializes the CPU, AHB and APB buses clocks
-  */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+	/** Initializes the CPU, AHB and APB buses clocks
+	 */
+	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
+			| RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+	RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
-  {
-    Error_Handler();
-  }
+	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK) {
+		Error_Handler();
+	}
 }
 
 /**
-  * @brief CRC Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_CRC_Init(void)
-{
+ * @brief CRC Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_CRC_Init(void) {
 
-  /* USER CODE BEGIN CRC_Init 0 */
+	/* USER CODE BEGIN CRC_Init 0 */
 
-  /* USER CODE END CRC_Init 0 */
+	/* USER CODE END CRC_Init 0 */
 
-  /* USER CODE BEGIN CRC_Init 1 */
+	/* USER CODE BEGIN CRC_Init 1 */
 
-  /* USER CODE END CRC_Init 1 */
-  hcrc.Instance = CRC;
-  if (HAL_CRC_Init(&hcrc) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN CRC_Init 2 */
+	/* USER CODE END CRC_Init 1 */
+	hcrc.Instance = CRC;
+	if (HAL_CRC_Init(&hcrc) != HAL_OK) {
+		Error_Handler();
+	}
+	/* USER CODE BEGIN CRC_Init 2 */
 
-  /* USER CODE END CRC_Init 2 */
-
-}
-
-/**
-  * @brief SPI5 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_SPI5_Init(void)
-{
-
-  /* USER CODE BEGIN SPI5_Init 0 */
-
-  /* USER CODE END SPI5_Init 0 */
-
-  /* USER CODE BEGIN SPI5_Init 1 */
-
-  /* USER CODE END SPI5_Init 1 */
-  /* SPI5 parameter configuration*/
-  hspi5.Instance = SPI5;
-  hspi5.Init.Mode = SPI_MODE_MASTER;
-  hspi5.Init.Direction = SPI_DIRECTION_2LINES;
-  hspi5.Init.DataSize = SPI_DATASIZE_8BIT;
-  hspi5.Init.CLKPolarity = SPI_POLARITY_LOW;
-  hspi5.Init.CLKPhase = SPI_PHASE_1EDGE;
-  hspi5.Init.NSS = SPI_NSS_SOFT;
-  hspi5.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
-  hspi5.Init.FirstBit = SPI_FIRSTBIT_MSB;
-  hspi5.Init.TIMode = SPI_TIMODE_DISABLE;
-  hspi5.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-  hspi5.Init.CRCPolynomial = 10;
-  if (HAL_SPI_Init(&hspi5) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN SPI5_Init 2 */
-
-  /* USER CODE END SPI5_Init 2 */
+	/* USER CODE END CRC_Init 2 */
 
 }
 
 /**
-  * @brief TIM1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM1_Init(void)
-{
+ * @brief SPI5 Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_SPI5_Init(void) {
 
-  /* USER CODE BEGIN TIM1_Init 0 */
+	/* USER CODE BEGIN SPI5_Init 0 */
 
-  /* USER CODE END TIM1_Init 0 */
+	/* USER CODE END SPI5_Init 0 */
 
-  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
+	/* USER CODE BEGIN SPI5_Init 1 */
 
-  /* USER CODE BEGIN TIM1_Init 1 */
+	/* USER CODE END SPI5_Init 1 */
+	/* SPI5 parameter configuration*/
+	hspi5.Instance = SPI5;
+	hspi5.Init.Mode = SPI_MODE_MASTER;
+	hspi5.Init.Direction = SPI_DIRECTION_2LINES;
+	hspi5.Init.DataSize = SPI_DATASIZE_8BIT;
+	hspi5.Init.CLKPolarity = SPI_POLARITY_LOW;
+	hspi5.Init.CLKPhase = SPI_PHASE_1EDGE;
+	hspi5.Init.NSS = SPI_NSS_SOFT;
+	hspi5.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
+	hspi5.Init.FirstBit = SPI_FIRSTBIT_MSB;
+	hspi5.Init.TIMode = SPI_TIMODE_DISABLE;
+	hspi5.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+	hspi5.Init.CRCPolynomial = 10;
+	if (HAL_SPI_Init(&hspi5) != HAL_OK) {
+		Error_Handler();
+	}
+	/* USER CODE BEGIN SPI5_Init 2 */
 
-  /* USER CODE END TIM1_Init 1 */
-  htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 0;
-  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 65535;
-  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim1.Init.RepetitionCounter = 0;
-  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM1_Init 2 */
-
-  /* USER CODE END TIM1_Init 2 */
+	/* USER CODE END SPI5_Init 2 */
 
 }
 
 /**
-  * @brief USART1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USART1_UART_Init(void)
-{
+ * @brief TIM1 Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_TIM1_Init(void) {
 
-  /* USER CODE BEGIN USART1_Init 0 */
+	/* USER CODE BEGIN TIM1_Init 0 */
 
-  /* USER CODE END USART1_Init 0 */
+	/* USER CODE END TIM1_Init 0 */
 
-  /* USER CODE BEGIN USART1_Init 1 */
+	TIM_ClockConfigTypeDef sClockSourceConfig = { 0 };
+	TIM_MasterConfigTypeDef sMasterConfig = { 0 };
 
-  /* USER CODE END USART1_Init 1 */
-  huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
-  huart1.Init.WordLength = UART_WORDLENGTH_8B;
-  huart1.Init.StopBits = UART_STOPBITS_1;
-  huart1.Init.Parity = UART_PARITY_NONE;
-  huart1.Init.Mode = UART_MODE_TX_RX;
-  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USART1_Init 2 */
+	/* USER CODE BEGIN TIM1_Init 1 */
 
-  /* USER CODE END USART1_Init 2 */
+	/* USER CODE END TIM1_Init 1 */
+	htim1.Instance = TIM1;
+	htim1.Init.Prescaler = 0;
+	htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
+	htim1.Init.Period = 65535;
+	htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+	htim1.Init.RepetitionCounter = 0;
+	htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+	if (HAL_TIM_Base_Init(&htim1) != HAL_OK) {
+		Error_Handler();
+	}
+	sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+	if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK) {
+		Error_Handler();
+	}
+	sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+	sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+	if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig)
+			!= HAL_OK) {
+		Error_Handler();
+	}
+	/* USER CODE BEGIN TIM1_Init 2 */
+
+	/* USER CODE END TIM1_Init 2 */
 
 }
 
 /**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_GPIO_Init(void)
-{
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
-  /* USER CODE BEGIN MX_GPIO_Init_1 */
+ * @brief USART1 Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_USART1_UART_Init(void) {
 
-  /* USER CODE END MX_GPIO_Init_1 */
+	/* USER CODE BEGIN USART1_Init 0 */
 
-  /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOC_CLK_ENABLE();
-  __HAL_RCC_GPIOF_CLK_ENABLE();
-  __HAL_RCC_GPIOH_CLK_ENABLE();
-  __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
-  __HAL_RCC_GPIOG_CLK_ENABLE();
-  __HAL_RCC_GPIOE_CLK_ENABLE();
-  __HAL_RCC_GPIOD_CLK_ENABLE();
+	/* USER CODE END USART1_Init 0 */
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, NCS_MEMS_SPI_Pin|CSX_Pin|OTG_FS_PSO_Pin, GPIO_PIN_RESET);
+	/* USER CODE BEGIN USART1_Init 1 */
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(ACP_RST_GPIO_Port, ACP_RST_Pin, GPIO_PIN_RESET);
+	/* USER CODE END USART1_Init 1 */
+	huart1.Instance = USART1;
+	huart1.Init.BaudRate = 115200;
+	huart1.Init.WordLength = UART_WORDLENGTH_8B;
+	huart1.Init.StopBits = UART_STOPBITS_1;
+	huart1.Init.Parity = UART_PARITY_NONE;
+	huart1.Init.Mode = UART_MODE_TX_RX;
+	huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+	huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+	if (HAL_UART_Init(&huart1) != HAL_OK) {
+		Error_Handler();
+	}
+	/* USER CODE BEGIN USART1_Init 2 */
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOD, RDX_Pin|WRX_DCX_Pin, GPIO_PIN_RESET);
+	/* USER CODE END USART1_Init 2 */
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOG, LD3_Pin|LD4_Pin, GPIO_PIN_RESET);
+}
 
-  /*Configure GPIO pins : NCS_MEMS_SPI_Pin CSX_Pin OTG_FS_PSO_Pin */
-  GPIO_InitStruct.Pin = NCS_MEMS_SPI_Pin|CSX_Pin|OTG_FS_PSO_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+/**
+ * @brief GPIO Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_GPIO_Init(void) {
+	GPIO_InitTypeDef GPIO_InitStruct = { 0 };
+	/* USER CODE BEGIN MX_GPIO_Init_1 */
 
-  /*Configure GPIO pins : B1_Pin MEMS_INT1_Pin MEMS_INT2_Pin TP_INT1_Pin */
-  GPIO_InitStruct.Pin = B1_Pin|MEMS_INT1_Pin|MEMS_INT2_Pin|TP_INT1_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_EVT_RISING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+	/* USER CODE END MX_GPIO_Init_1 */
 
-  /*Configure GPIO pin : ACP_RST_Pin */
-  GPIO_InitStruct.Pin = ACP_RST_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(ACP_RST_GPIO_Port, &GPIO_InitStruct);
+	/* GPIO Ports Clock Enable */
+	__HAL_RCC_GPIOC_CLK_ENABLE();
+	__HAL_RCC_GPIOF_CLK_ENABLE();
+	__HAL_RCC_GPIOH_CLK_ENABLE();
+	__HAL_RCC_GPIOA_CLK_ENABLE();
+	__HAL_RCC_GPIOB_CLK_ENABLE();
+	__HAL_RCC_GPIOG_CLK_ENABLE();
+	__HAL_RCC_GPIOE_CLK_ENABLE();
+	__HAL_RCC_GPIOD_CLK_ENABLE();
 
-  /*Configure GPIO pin : OTG_FS_OC_Pin */
-  GPIO_InitStruct.Pin = OTG_FS_OC_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_EVT_RISING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(OTG_FS_OC_GPIO_Port, &GPIO_InitStruct);
+	/*Configure GPIO pin Output Level */
+	HAL_GPIO_WritePin(GPIOC, NCS_MEMS_SPI_Pin | CSX_Pin | OTG_FS_PSO_Pin,
+			GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : BOOT1_Pin */
-  GPIO_InitStruct.Pin = BOOT1_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(BOOT1_GPIO_Port, &GPIO_InitStruct);
+	/*Configure GPIO pin Output Level */
+	HAL_GPIO_WritePin(ACP_RST_GPIO_Port, ACP_RST_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : TE_Pin */
-  GPIO_InitStruct.Pin = TE_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(TE_GPIO_Port, &GPIO_InitStruct);
+	/*Configure GPIO pin Output Level */
+	HAL_GPIO_WritePin(GPIOD, RDX_Pin | WRX_DCX_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : RDX_Pin WRX_DCX_Pin */
-  GPIO_InitStruct.Pin = RDX_Pin|WRX_DCX_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+	/*Configure GPIO pin Output Level */
+	HAL_GPIO_WritePin(GPIOG, LD3_Pin | LD4_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : LD3_Pin LD4_Pin */
-  GPIO_InitStruct.Pin = LD3_Pin|LD4_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
+	/*Configure GPIO pins : NCS_MEMS_SPI_Pin CSX_Pin OTG_FS_PSO_Pin */
+	GPIO_InitStruct.Pin = NCS_MEMS_SPI_Pin | CSX_Pin | OTG_FS_PSO_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /* USER CODE BEGIN MX_GPIO_Init_2 */
+	/*Configure GPIO pins : B1_Pin MEMS_INT1_Pin MEMS_INT2_Pin TP_INT1_Pin */
+	GPIO_InitStruct.Pin = B1_Pin | MEMS_INT1_Pin | MEMS_INT2_Pin | TP_INT1_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_EVT_RISING;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /* USER CODE END MX_GPIO_Init_2 */
+	/*Configure GPIO pin : ACP_RST_Pin */
+	GPIO_InitStruct.Pin = ACP_RST_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	HAL_GPIO_Init(ACP_RST_GPIO_Port, &GPIO_InitStruct);
+
+	/*Configure GPIO pin : OTG_FS_OC_Pin */
+	GPIO_InitStruct.Pin = OTG_FS_OC_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_EVT_RISING;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	HAL_GPIO_Init(OTG_FS_OC_GPIO_Port, &GPIO_InitStruct);
+
+	/*Configure GPIO pin : BOOT1_Pin */
+	GPIO_InitStruct.Pin = BOOT1_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	HAL_GPIO_Init(BOOT1_GPIO_Port, &GPIO_InitStruct);
+
+	/*Configure GPIO pin : TE_Pin */
+	GPIO_InitStruct.Pin = TE_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	HAL_GPIO_Init(TE_GPIO_Port, &GPIO_InitStruct);
+
+	/*Configure GPIO pins : RDX_Pin WRX_DCX_Pin */
+	GPIO_InitStruct.Pin = RDX_Pin | WRX_DCX_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+	/*Configure GPIO pins : LD3_Pin LD4_Pin */
+	GPIO_InitStruct.Pin = LD3_Pin | LD4_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
+
+	/* USER CODE BEGIN MX_GPIO_Init_2 */
+
+	/* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
-void print_rtos_stats(void)
-{
+void print_rtos_stats(void) {
 
-    // 1. Get the total number of tasks currently running
-    UBaseType_t uxArraySize = uxTaskGetNumberOfTasks();
+	// 1. Get the total number of tasks currently running
+	UBaseType_t uxArraySize = uxTaskGetNumberOfTasks();
 
-    // 2. Allocate an array of TaskStatus_t structures to hold the data
-    TaskStatus_t* pxTaskStatusArray = pvPortMalloc(uxArraySize * sizeof(TaskStatus_t));
+	// 2. Allocate an array of TaskStatus_t structures to hold the data
+	TaskStatus_t *pxTaskStatusArray = pvPortMalloc(
+			uxArraySize * sizeof(TaskStatus_t));
 
 	// Total free heap right now
-	printf("====FreeHeap:%u bytes\n", (unsigned int)xPortGetFreeHeapSize());
+	printf("====FreeHeap:%u bytes\n", (unsigned int) xPortGetFreeHeapSize());
 
 	// The lowest the heap has ever dropped (historical minimum)
-	printf("LowEverHeap:%u bytes\n", (unsigned int)xPortGetMinimumEverFreeHeapSize());
+	printf("LowEverHeap:%u bytes\n",
+			(unsigned int) xPortGetMinimumEverFreeHeapSize());
 
-    if (pxTaskStatusArray != NULL)
-    {
-        // 3. Fill the array with the raw task data
-        // (The NULL parameter is for run-time stats, which we don't need here)
-        uxArraySize = uxTaskGetSystemState(pxTaskStatusArray, uxArraySize, NULL);
+	if (pxTaskStatusArray != NULL) {
+		// 3. Fill the array with the raw task data
+		// (The NULL parameter is for run-time stats, which we don't need here)
+		uxArraySize = uxTaskGetSystemState(pxTaskStatusArray, uxArraySize,
+				NULL);
 
-        printf("(T_Name, HWM):");
-        // 4. Loop through the array and print ONLY the Name and HWM
-        for (UBaseType_t i = 0; i < uxArraySize; i++)
-        {
-        	// Print up to 5 characters, left-justified with a width of 5
-			printf("(%-6.6s,%u)",
-				   pxTaskStatusArray[i].pcTaskName,
-				   (unsigned int)pxTaskStatusArray[i].usStackHighWaterMark);
-        }
-        printf("====\n");
+		printf("(T_Name, HWM):");
+		// 4. Loop through the array and print ONLY the Name and HWM
+		for (UBaseType_t i = 0; i < uxArraySize; i++) {
+			// Print up to 5 characters, left-justified with a width of 5
+			printf("(%-6.6s,%u)", pxTaskStatusArray[i].pcTaskName,
+					(unsigned int) pxTaskStatusArray[i].usStackHighWaterMark);
+		}
+		printf("====\n");
 
-        // 5. Always free the memory you allocated!
-        vPortFree(pxTaskStatusArray);
-    }
-    else
-    {
-        printf("Not enough heap\n");
-    }
+		// 5. Always free the memory you allocated!
+		vPortFree(pxTaskStatusArray);
+	} else {
+		printf("Not enough heap\n");
+	}
 }
 
 /* Intercept printf and send characters to our RTOS queue */
 int _write(int file, char *ptr, int len) {
-    /* Ensure the RTOS is actually running and the objects exist */
-    if (print_stream != NULL && printf_mutex != NULL) {
+	/* Ensure the RTOS is actually running and the objects exist */
+	if (print_stream != NULL && printf_mutex != NULL) {
 
-        /* 1. Ask for the key. Wait forever (portMAX_DELAY) if another task has it. */
-        if (xSemaphoreTake(printf_mutex, portMAX_DELAY) == pdTRUE) {
+		/* 1. Ask for the key. Wait forever (portMAX_DELAY) if another task has it. */
+		if (xSemaphoreTake(printf_mutex, portMAX_DELAY) == pdTRUE) {
 
-            /* 2. We have the lock! It is now 100% safe to send the data. */
-            xStreamBufferSend(print_stream, ptr, len, portMAX_DELAY);
+			/* 2. We have the lock! It is now 100% safe to send the data. */
+			xStreamBufferSend(print_stream, ptr, len, portMAX_DELAY);
 
-            /* 3. Give the key back so other tasks can print. */
-            xSemaphoreGive(printf_mutex);
-        }
-    }
-    return len;
+			/* 3. Give the key back so other tasks can print. */
+			xSemaphoreGive(printf_mutex);
+		}
+	}
+	return len;
 }
 
 /* USER CODE END 4 */
@@ -548,11 +538,10 @@ int _write(int file, char *ptr, int len) {
  * @retval None
  */
 /* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void const * argument)
-{
-  /* init code for USB_HOST */
-  MX_USB_HOST_Init();
-  /* USER CODE BEGIN 5 */
+void StartDefaultTask(void const *argument) {
+	/* init code for USB_HOST */
+	MX_USB_HOST_Init();
+	/* USER CODE BEGIN 5 */
 	/* Infinite loop */
 	for (;;) {
 		HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
@@ -562,7 +551,7 @@ void StartDefaultTask(void const * argument)
 		}
 		osDelay(3000);
 	}
-  /* USER CODE END 5 */
+	/* USER CODE END 5 */
 }
 
 /* USER CODE BEGIN Header_StartLvglTask */
@@ -572,19 +561,20 @@ void StartDefaultTask(void const * argument)
  * @retval None
  */
 /* USER CODE END Header_StartLvglTask */
-void StartLvglTask(void const * argument)
-{
-  /* USER CODE BEGIN StartLvglTask */
+void StartLvglTask(void const *argument) {
+	/* USER CODE BEGIN StartLvglTask */
 	printf("StartLvglTask\n");
 	/* Infinite loop */
 	for (;;) {
-		update_debug_terminal(print_stream);
+		osMutexWait(lvgl_mutex, osWaitForever);
 
+		update_debug_terminal(print_stream);
 		uint32_t sleep_time = render_timer_handler();
 
+		osMutexRelease(lvgl_mutex);
 		osDelay(sleep_time); /*Sleep the thread*/
 	}
-  /* USER CODE END StartLvglTask */
+	/* USER CODE END StartLvglTask */
 }
 
 /* USER CODE BEGIN Header_StartChessTask */
@@ -594,61 +584,79 @@ void StartLvglTask(void const * argument)
  * @retval None
  */
 /* USER CODE END Header_StartChessTask */
-void StartChessTask(void const * argument)
-{
-  /* USER CODE BEGIN StartChessTask */
+void StartChessTask(void const *argument) {
+	/* USER CODE BEGIN StartChessTask */
 	init_chess_engine();
 	printf("init_chess_engine\n");
-	delete_loading_board_spinner();
 
-
+	osMutexWait(lvgl_mutex, osWaitForever);
+	hide_loading_spinner();
 	render_board_state(); // render initial board
-	osDelay(30);
-	render_board_state(); // render initial board (call again just in case)
 	printf("render board\n");
+	osMutexRelease(lvgl_mutex);
+
+	char from_str[3], to_str[3];
 
 	/* Infinite loop */
 	for (;;) {
-		osDelay(100);
+		osEvent evt = osSignalWait(0x01, osWaitForever);
+
+		if (evt.status == osEventSignal) {
+			osMutexWait(lvgl_mutex, osWaitForever);
+			show_loading_spinner();
+			osMutexRelease(lvgl_mutex);
+
+			int chosen_move = engine_make_move();
+
+			printf("AI: %s to %s\n",
+					sq64_to_str(SQ64(FROMSQ(chosen_move)), from_str),
+					sq64_to_str(SQ64(TOSQ(chosen_move)), to_str));
+			if (check_game_over(&engine_board)) {
+				printf("Game Over!\n");
+			}
+
+			osMutexWait(lvgl_mutex, osWaitForever);
+			hide_loading_spinner();
+			render_board_state();
+			is_ai_thinking = false;
+			osMutexRelease(lvgl_mutex);
+		}
 	}
-  /* USER CODE END StartChessTask */
+	/* USER CODE END StartChessTask */
 }
 
 /**
-  * @brief  Period elapsed callback in non blocking mode
-  * @note   This function is called  when TIM6 interrupt took place, inside
-  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
-  * a global variable "uwTick" used as application time base.
-  * @param  htim : TIM handle
-  * @retval None
-  */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-  /* USER CODE BEGIN Callback 0 */
+ * @brief  Period elapsed callback in non blocking mode
+ * @note   This function is called  when TIM6 interrupt took place, inside
+ * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+ * a global variable "uwTick" used as application time base.
+ * @param  htim : TIM handle
+ * @retval None
+ */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+	/* USER CODE BEGIN Callback 0 */
 
-  /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM6)
-  {
-    HAL_IncTick();
-  }
-  /* USER CODE BEGIN Callback 1 */
+	/* USER CODE END Callback 0 */
+	if (htim->Instance == TIM6) {
+		HAL_IncTick();
+	}
+	/* USER CODE BEGIN Callback 1 */
 
-  /* USER CODE END Callback 1 */
+	/* USER CODE END Callback 1 */
 }
 
 /**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
-void Error_Handler(void)
-{
-  /* USER CODE BEGIN Error_Handler_Debug */
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
+void Error_Handler(void) {
+	/* USER CODE BEGIN Error_Handler_Debug */
 	/* User can add his own implementation to report the HAL error return state */
 	__disable_irq();
 	HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, GPIO_PIN_SET); // red led
 	while (1) {
 	}
-  /* USER CODE END Error_Handler_Debug */
+	/* USER CODE END Error_Handler_Debug */
 }
 #ifdef USE_FULL_ASSERT
 /**
