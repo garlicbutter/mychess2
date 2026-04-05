@@ -23,6 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "stream_buffer.h"
 #include "stdio.h"
 #include "stdlib.h"
 #include "engine.h"
@@ -59,7 +60,7 @@ osThreadId lvglTaskHandle;
 osThreadId chessTaskHandle;
 /* USER CODE BEGIN PV */
 
-QueueHandle_t print_queue;
+StreamBufferHandle_t print_stream;
 
 /* USER CODE END PV */
 
@@ -150,7 +151,10 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_QUEUES */
 	/* add queues, ... */
-	print_queue = xQueueCreate(512, sizeof(char));
+	print_stream = xStreamBufferCreate(512, 1);
+	if (print_stream == NULL) {
+		Error_Handler();
+	}
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
@@ -476,17 +480,19 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void print_rtos_stats(void)
 {
-	// Total free heap right now
-	printf("FreeHeap:%u bytes\n", (unsigned int)xPortGetFreeHeapSize());
-
-	// The lowest the heap has ever dropped (historical minimum)
-	printf("LowestEverFreeHeap:%u bytes\n", (unsigned int)xPortGetMinimumEverFreeHeapSize());
 
     // 1. Get the total number of tasks currently running
     UBaseType_t uxArraySize = uxTaskGetNumberOfTasks();
 
     // 2. Allocate an array of TaskStatus_t structures to hold the data
     TaskStatus_t* pxTaskStatusArray = pvPortMalloc(uxArraySize * sizeof(TaskStatus_t));
+
+	// Total free heap right now
+    printf("===============\n");
+	printf("FreeHeap:%u bytes\n", (unsigned int)xPortGetFreeHeapSize());
+
+	// The lowest the heap has ever dropped (historical minimum)
+	printf("LowestEverFreeHeap:%u bytes\n", (unsigned int)xPortGetMinimumEverFreeHeapSize());
 
     if (pxTaskStatusArray != NULL)
     {
@@ -515,15 +521,8 @@ void print_rtos_stats(void)
 
 /* Intercept printf and send characters to our RTOS queue */
 int _write(int file, char *ptr, int len) {
-	//	VCP (Virtual Com Port is not avaible) for my DISCO board.
-	//	because is comes with ST-LINK V2. so... printf doens't work via UART
-//	HAL_UART_Transmit(&huart1, (uint8_t *)ptr, len, HAL_MAX_DELAY);
-
-	if (print_queue != NULL) {
-		for (int i = 0; i < len; i++) {
-			/* Send char to queue. Wait max 5 ticks if the buffer is full. */
-			xQueueSend(print_queue, &ptr[i], 5);
-		}
+	if (print_stream != NULL) {
+		xStreamBufferSend(print_stream, ptr, len, 5);
 	}
 	return len;
 }
@@ -567,7 +566,7 @@ void StartLvglTask(void const * argument)
 	printf("StartLvglTask\n");
 	/* Infinite loop */
 	for (;;) {
-		update_debug_terminal(print_queue);
+		update_debug_terminal(print_stream);
 
 		uint32_t sleep_time = render_timer_handler();
 

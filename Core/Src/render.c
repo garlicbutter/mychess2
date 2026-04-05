@@ -249,66 +249,64 @@ void my_input_read(lv_indev_t *indev, lv_indev_data_t *data) {
 	}
 }
 
-void update_debug_terminal(QueueHandle_t queue) {
-	if (queue == NULL || objects.debug_terminal == NULL)
-		return;
+void update_debug_terminal(StreamBufferHandle_t stream) {
+    if (stream == NULL || objects.debug_terminal == NULL)
+        return;
 
-	char buf[64];
-	char c;
-	int i = 0;
+    char buf[64];
 
-	/* Pull up to 63 characters per frame out of the RTOS queue */
-	while (i < 63 && xQueueReceive(queue, &c, 0) == pdTRUE) {
-		buf[i++] = c;
-	}
+    /* Pull up to 63 characters per frame out of the RTOS stream buffer.
+     * We use a wait time of 0 ticks so we never block the GUI task!
+     */
+    size_t bytes_received = xStreamBufferReceive(stream, buf, sizeof(buf) - 1, 0);
 
-	if (i > 0) {
-		buf[i] = '\0';
+    if (bytes_received > 0) {
+        /* Guarantee null termination based on exactly how many bytes we grabbed */
+        buf[bytes_received] = '\0';
 
-		/* 1. Append the new characters */
-		lv_textarea_add_text(objects.debug_terminal, buf);
+        /* 1. Append the new characters */
+        lv_textarea_add_text(objects.debug_terminal, buf);
 
-		/* 2. Get the current text and count the lines */
-		const char *text = lv_textarea_get_text(objects.debug_terminal);
-		int newline_count = 0;
-		const char *ptr = text;
+        /* 2. Get the current text and count the lines */
+        const char *text = lv_textarea_get_text(objects.debug_terminal);
+        int newline_count = 0;
+        const char *ptr = text;
 
-		while (*ptr) {
-			if (*ptr == '\n') {
-				newline_count++;
-			}
-			ptr++;
-		}
+        while (*ptr) {
+            if (*ptr == '\n') {
+                newline_count++;
+            }
+            ptr++;
+        }
 
-		/* 3. If we exceed 10 lines, chop off the oldest ones safely */
-		if (newline_count > 10) {
-			int lines_to_remove = newline_count - 10;
-			ptr = text;
+        /* 3. If we exceed 10 lines, chop off the oldest ones safely */
+        if (newline_count > 10) {
+            int lines_to_remove = newline_count - 10;
+            ptr = text;
 
-			/* Move pointer forward until we pass the old lines */
-			while (lines_to_remove > 0 && *ptr) {
-				if (*ptr == '\n') {
-					lines_to_remove--;
-				}
-				ptr++;
-			}
+            /* Move pointer forward until we pass the old lines */
+            while (lines_to_remove > 0 && *ptr) {
+                if (*ptr == '\n') {
+                    lines_to_remove--;
+                }
+                ptr++;
+            }
 
-			/* * THE FIX: Use a static buffer. It stays in global memory,
-			 * so it won't crash your FreeRTOS stack, and it completely
-			 * prevents LVGL from reading from memory it is trying to free.
-			 */
-			static char safe_buffer[500];
+            /* THE FIX: Use a static buffer. It stays in global memory,
+             * so it won't crash your FreeRTOS stack, and it completely
+             * prevents LVGL from reading from memory it is trying to free.
+             */
+            static char safe_buffer[500];
 
-			/* Copy the pruned text into our safe holding area */
-			strncpy(safe_buffer, ptr, sizeof(safe_buffer) - 1);
-			safe_buffer[sizeof(safe_buffer) - 1] = '\0'; // Guarantee null termination
+            /* Copy the pruned text into our safe holding area */
+            strncpy(safe_buffer, ptr, sizeof(safe_buffer) - 1);
+            safe_buffer[sizeof(safe_buffer) - 1] = '\0'; // Guarantee null termination
 
-			/* Now update LVGL safely */
-			lv_textarea_set_text(objects.debug_terminal, safe_buffer);
-			lv_obj_scroll_to_y(objects.debug_terminal, LV_COORD_MAX,
-			LV_ANIM_OFF); // scroll to end immediately (prevent cursor bouncing back to top)
-		}
-	}
+            /* Now update LVGL safely */
+            lv_textarea_set_text(objects.debug_terminal, safe_buffer);
+            lv_obj_scroll_to_y(objects.debug_terminal, LV_COORD_MAX, LV_ANIM_OFF);
+        }
+    }
 }
 
 // returns remaining sleeping time

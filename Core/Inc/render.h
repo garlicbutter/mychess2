@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 #include "cmsis_os.h"
+#include "stream_buffer.h"
 
 #include "lvgl/lvgl.h"
 #include "ui.h"
@@ -36,7 +37,7 @@ void drag_event_cb(lv_event_t *e);
 void my_flush_cb(lv_display_t *display, const lv_area_t *area, uint8_t *px_map);
 const void* get_sprite(int vice_piece);
 void my_input_read(lv_indev_t *indev, lv_indev_data_t *data);
-void update_debug_terminal(QueueHandle_t queue);
+void update_debug_terminal(StreamBufferHandle_t stream);
 
 void clear_move_markers(void);
 void show_move_markers(int from_sq120);
