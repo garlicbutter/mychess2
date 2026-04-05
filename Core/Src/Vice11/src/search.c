@@ -46,6 +46,32 @@ static void PickNextMove(int moveNum, S_MOVELIST *list) {
     list->moves[bestNum] = temp;
 }
 
+static void ScoreMoves(const S_BOARD *pos, S_MOVELIST *list, int depth) {
+    for (int i = 0; i < list->count; ++i) {
+        int move = list->moves[i].move;
+        int score = 0;
+
+        // Is it a capture?
+        if (CAPTURED(move) != EMPTY) {
+            int attacker = pos->pieces[FROMSQ(move)]; // The piece making the move
+            int victim = CAPTURED(move);              // The piece being eaten
+            
+            // Score captures from 1,000,000 to 1,000,605
+            score = 1000000 + MvvLvaScores[attacker][victim]; 
+        } 
+        // If not a capture, is it a Killer Move?
+        else {
+            if (pos->searchKillers[0][depth] == move) {
+                score = 900000; // 1st Killer (high score, but below captures)
+            } else if (pos->searchKillers[1][depth] == move) {
+                score = 800000; // 2nd Killer
+            }
+        }
+
+        list->moves[i].score = score;
+    }
+}
+
 static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info) {
 	//	alpha: lower bound, what's the worst move I can play
 	//	beta: upper bound, opponent's best score.
@@ -78,7 +104,11 @@ static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO 
     // MOVE GENERATION:
 	S_MOVELIST* moves_list = &engine_move_lists[depth]; // statically allocated buffer.
 	GenerateAllMoves(pos,moves_list);
+    ScoreMoves(pos, moves_list, depth);
+    
 	for (int i = 0; i < moves_list->count; ++i) {
+        PickNextMove(i, moves_list);
+
 		int move = moves_list->moves[i].move;
 
 		// check legality
@@ -92,6 +122,12 @@ static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO 
 
 		// PRUNING LOGIC
         if (score >= beta) {
+            if (CAPTURED(move) == EMPTY) {
+                // Shift the old 1st killer to the 2nd slot
+                pos->searchKillers[1][depth] = pos->searchKillers[0][depth];
+                // Put the new killer in the 1st slot
+                pos->searchKillers[0][depth] = move;
+            }
         	return beta;
         }
 
@@ -122,6 +158,12 @@ int SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
     info->nodes = 0;
     info->depth_searched = 0;
     info->quit = FALSE;
+
+    // Clear killers for the new search
+    for (int i = 0; i < MAXDEPTH; ++i) {
+    	pos->searchKillers[0][i] = 0;
+    	pos->searchKillers[1][i] = 0;
+    }
 
     // ITERATIVE DEEPENING LOOP
     // Start at depth 1 and go up to the target depth.
