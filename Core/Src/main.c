@@ -61,6 +61,7 @@ osThreadId chessTaskHandle;
 /* USER CODE BEGIN PV */
 
 StreamBufferHandle_t print_stream;
+SemaphoreHandle_t printf_mutex;
 
 /* USER CODE END PV */
 
@@ -143,6 +144,7 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
 	/* add semaphores, ... */
+	printf_mutex = xSemaphoreCreateMutex();
   /* USER CODE END RTOS_SEMAPHORES */
 
   /* USER CODE BEGIN RTOS_TIMERS */
@@ -488,11 +490,10 @@ void print_rtos_stats(void)
     TaskStatus_t* pxTaskStatusArray = pvPortMalloc(uxArraySize * sizeof(TaskStatus_t));
 
 	// Total free heap right now
-    printf("===============\n");
-	printf("FreeHeap:%u bytes\n", (unsigned int)xPortGetFreeHeapSize());
+	printf("====FreeHeap:%u bytes\n", (unsigned int)xPortGetFreeHeapSize());
 
 	// The lowest the heap has ever dropped (historical minimum)
-	printf("LowestEverFreeHeap:%u bytes\n", (unsigned int)xPortGetMinimumEverFreeHeapSize());
+	printf("LowEverHeap:%u bytes\n", (unsigned int)xPortGetMinimumEverFreeHeapSize());
 
     if (pxTaskStatusArray != NULL)
     {
@@ -500,31 +501,42 @@ void print_rtos_stats(void)
         // (The NULL parameter is for run-time stats, which we don't need here)
         uxArraySize = uxTaskGetSystemState(pxTaskStatusArray, uxArraySize, NULL);
 
-        printf("T_Name, HWM\n");
+        printf("(T_Name, HWM):");
         // 4. Loop through the array and print ONLY the Name and HWM
         for (UBaseType_t i = 0; i < uxArraySize; i++)
         {
         	// Print up to 5 characters, left-justified with a width of 5
-			printf("%-5.5s %u\r\n",
+			printf("(%-6.6s,%u)",
 				   pxTaskStatusArray[i].pcTaskName,
 				   (unsigned int)pxTaskStatusArray[i].usStackHighWaterMark);
         }
+        printf("====\n");
 
         // 5. Always free the memory you allocated!
         vPortFree(pxTaskStatusArray);
     }
     else
     {
-        printf("Not enough heap to generate task list!\r\n");
+        printf("Not enough heap\n");
     }
 }
 
 /* Intercept printf and send characters to our RTOS queue */
 int _write(int file, char *ptr, int len) {
-	if (print_stream != NULL) {
-		xStreamBufferSend(print_stream, ptr, len, 5);
-	}
-	return len;
+    /* Ensure the RTOS is actually running and the objects exist */
+    if (print_stream != NULL && printf_mutex != NULL) {
+
+        /* 1. Ask for the key. Wait forever (portMAX_DELAY) if another task has it. */
+        if (xSemaphoreTake(printf_mutex, portMAX_DELAY) == pdTRUE) {
+
+            /* 2. We have the lock! It is now 100% safe to send the data. */
+            xStreamBufferSend(print_stream, ptr, len, portMAX_DELAY);
+
+            /* 3. Give the key back so other tasks can print. */
+            xSemaphoreGive(printf_mutex);
+        }
+    }
+    return len;
 }
 
 /* USER CODE END 4 */
@@ -548,7 +560,7 @@ void StartDefaultTask(void const * argument)
 			print_rtos_stats();
 			update_memory_bars();
 		}
-		osDelay(1000);
+		osDelay(3000);
 	}
   /* USER CODE END 5 */
 }

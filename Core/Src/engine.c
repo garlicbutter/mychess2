@@ -5,60 +5,54 @@
 S_BOARD engine_board = { 0 };
 static S_SEARCHINFO info[1];
 
-void engine_make_move() {
+int engine_make_move() {
 	static int engine_make_move_printed = 1;
 
-	make_random_move();
+	int move;
+
+	move = make_random_move();
 	if (engine_make_move_printed) {
 		printf("move=random\n");
 		engine_make_move_printed = 0;
 	}
 
-//	make_smart_move();
+//	move = make_smart_move();
 //	if (engine_make_move_printed) {
 //		printf("move=search\n");
 //		engine_make_move_printed = 0;
 //	}
+
+	ASSERT(MakeMove(&engine_board, move));
+	return move;
 }
 
-void make_random_move(void) {
-	S_MOVELIST list[1];
-	GenerateAllMoves(&engine_board, list);
+// very crude AI
+int make_random_move(void) {
+    S_MOVELIST list[1];
 
-	int legal_moves[256]; // Buffer to store the actual safe moves
-	int legal_count = 0;
+	// first, try capture
+    GenerateAllCaps(&engine_board, list);
+    for (int i = 0; i < list->count; ++i) {
+        int move = list->moves[i].move;
+        if (MoveExists(&engine_board, move)) {
+            engine_board.ply = 0; /* CRITICAL: Reset search ply so we don't overflow RAM */
+            return move;
+        }
+    }
 
-	/* 1. Filter the pseudo-legal list into a strictly legal list */
-	for (int moveNum = 0; moveNum < list->count; ++moveNum) {
-		int move = list->moves[moveNum].move;
-
-		/* If the move is safe, save it and immediately undo it */
-		if (MakeMove(&engine_board, move)) {
-			legal_moves[legal_count] = move;
-			legal_count++;
-
-			TakeMove(&engine_board); // Put the piece back!
-		}
-	}
-
-	/* 2. Pick a random move from the safe list */
-	if (legal_count > 0) {
-		int random_index = rand() % legal_count;
-		int chosen_move = legal_moves[random_index];
-
-		/* Make the final chosen move for real */
-		MakeMove(&engine_board, chosen_move);
-		engine_board.ply = 0; // Reset ply counter to prevent memory leaks
-
-		/* Optional: Print what the computer did to your terminal */
-		char from_str[3], to_str[3];
-		printf("Com: %s to %s\n",
-				sq64_to_str(SQ64(FROMSQ(chosen_move)), from_str),
-				sq64_to_str(SQ64(TOSQ(chosen_move)), to_str));
-	}
+    // or just play the first legal move it found
+    GenerateAllMoves(&engine_board, list);
+    for (int i = 0; i < list->count; ++i) {
+        int move = list->moves[i].move;
+        if (MoveExists(&engine_board, move)) {
+            engine_board.ply = 0; /* CRITICAL: Reset search ply */
+            return move;
+        }
+    }
+    return NOMOVE;
 }
 
-void make_smart_move(void) {
+int make_smart_move(void) {
 
     /* 1. Configure the Search Limits */
     info->depth = 2;        // Start with 3 half-moves deep. Increase to 4 if it's too fast.
@@ -74,49 +68,51 @@ void make_smart_move(void) {
 
     /* 3. Execute the best move if one was found */
     if(best_move != 0) {
-        MakeMove(&engine_board, best_move);
         engine_board.ply = 0; // Reset ply to prevent memory overflow on next turn
-
-        char from_str[3], to_str[3];
-        printf("AI Played: %s to %s (Searched %ld nodes)\n",
-               sq64_to_str(SQ64(FROMSQ(best_move)), from_str),
-               sq64_to_str(SQ64(TOSQ(best_move)), to_str),
-               info->nodes);
+        printf("AI(Searched %ld nodes)\n",info->nodes);
     }
+
+	return best_move;
 }
 
-int attempt_human_move(int from_sq, int to_sq) {
-	S_MOVELIST list[1];
-	GenerateAllMoves(&engine_board, list);
+int check_human_move_valid(int from_sq, int to_sq) {
+    S_MOVELIST list[1];
+    GenerateAllMoves(&engine_board, list);
+    
+    int parsed_move = NOMOVE;
+    for (int i = 0; i < list->count; ++i) {
+        int move = list->moves[i].move;
+        
+        if (FROMSQ(move) == from_sq && TOSQ(move) == to_sq) {
+            int promoted_piece = PROMOTED(move);
+            if (promoted_piece != EMPTY) {
+                // For a basic GUI, auto-promote to Queen. 
+                // TODO: handle underpromotions (Knight, Bishop, Rook).
+                if (promoted_piece == wQ || promoted_piece == bQ) {
+                    parsed_move = move;
+                    break;
+                }
+                continue; 
+            }
+            // Standard move (no promotion)
+            parsed_move = move;
+            break;
+        }
+    }
 
-	int move = 0;
-	int Legal = 0;
-
-	// Loop through all generated moves
-	for (int moveNum = 0; moveNum < list->count; ++moveNum) {
-
-		move = list->moves[moveNum].move;
-
-		// Check if the generated move matches where you dropped the piece
-		if (FROMSQ(move) == from_sq && TOSQ(move) == to_sq) {
-			//        	TODO: handle promotion
-
-			// Try to make the move (VICE checks if it leaves King in check here)
-			if (!MakeMove(&engine_board, move)) {
-				continue; // Move was pseudo-legal but left king in check
-			}
-
-			/* ADD THIS: Reset search ply since we aren't using the Alpha-Beta AI yet */
-			engine_board.ply = 0;
-
-			// Move was completely legal and has now been made on engine_board!
-			Legal = 1;
-			break;
-		}
-	}
-
-	return Legal;
+    // If we found a matching pseudo-legal move in the list
+    if (parsed_move != NOMOVE) {
+        // MakeMove verifies strict legality (e.g., doesn't leave your King in check).
+        // If it returns TRUE (1), it commits the move to the board state automatically.
+        // If it returns FALSE (0), VICE internally calls TakeMove() to revert it.
+        if (MakeMove(&engine_board, parsed_move)) {
+            return TRUE; // Move is legal and now successfully applied to engine_board
+        }
+    }
+    
+    return FALSE; 
 }
+
 
 char* sq64_to_str(int sq64, char *buf) {
 	if (sq64 < 0 || sq64 > 63) {
@@ -136,48 +132,43 @@ char* sq64_to_str(int sq64, char *buf) {
 	return buf;
 }
 
-/* Returns 1 if the game is over, 0 if the game continues, TODO: this is unnecessary once we add the ai search*/
 int check_game_over(S_BOARD *pos) {
-	S_MOVELIST list[1];
-	GenerateAllMoves(pos, list);
-
-	int legal_moves = 0;
-
-	/* Loop through all generated moves to see if ANY are legal */
-	for (int moveNum = 0; moveNum < list->count; ++moveNum) {
-
-		/* MakeMove returns FALSE if the move leaves the King in check */
-		if (MakeMove(pos, list->moves[moveNum].move)) {
-			/* We found a valid move! The game is not over. */
-			legal_moves++;
-
-			/* CRITICAL: We must undo the test move so we don't corrupt the board! */
-			TakeMove(pos);
-			break;
-		}
-	}
-
-	/* If we found 0 legal moves, the game is over. But who won? */
-	if (legal_moves == 0) {
-
-		/* Ask VICE if the current side's King is under attack by the OPPOSITE side */
-		int InCheck = SqAttacked(pos->KingSq[pos->side], pos->side ^ 1, pos);
-
-		if (InCheck) {
-			if (pos->side == WHITE) {
-				printf("\nBlack wins!\n");
-			} else {
-				printf("\nWhite wins!\n");
-			}
-		} else {
-			printf("\nSTALEMATE! Game is a Draw!\n");
-		}
-		return 1; // Game Over
-	}
-
-	return 0; // Game continues
+    S_MOVELIST list[1];
+    GenerateAllMoves(pos, list);
+    
+    int legal_moves_found = 0;
+    for (int i = 0; i < list->count; ++i) {
+        int move = list->moves[i].move;
+        if (MakeMove(pos, move)) {
+            legal_moves_found++;
+            TakeMove(pos); // We found a valid move, so undo it immediately
+            break;         // We only need to find 1 legal move to know the game isn't over
+        }
+    }
+    
+    // No legal moves exist for the current side
+    if (legal_moves_found == 0) {
+        int InCheck = SqAttacked(pos->KingSq[pos->side], pos->side ^ 1, pos);
+        if (InCheck) {
+            if (pos->side == WHITE) {
+                printf("\nCheckmate! Black wins!\n");
+            } else {
+                printf("\nCheckmate! White wins!\n");
+            }
+        } else {
+            printf("\nSTALEMATE! Game is a Draw!\n");
+        }
+        return 1; // Game Over
+    } 
+    
+    if (pos->fiftyMove >= 100) {
+        printf("\nDraw by Fifty-Move Rule!\n");
+        return 1;
+    }
+    
+    // TODO:  handle Threefold Repetition
+    return 0; // Game Continues
 }
-
 void init_chess_engine(void) {
 	AllInit(); // VICE's internal lookup table setup
 

@@ -7,12 +7,12 @@ extern "C" {
 
 #include "vice_defs.h"
 
-void engine_make_move(void);
+int engine_make_move(void);
 
-void make_random_move(void);
-void make_smart_move(void);
+int make_random_move(void);
+int make_smart_move(void);
 
-int attempt_human_move(int from_sq, int to_sq);
+int check_human_move_valid(int from_sq, int to_sq);
 char* sq64_to_str(int sq64, char *buf);
 int check_game_over(S_BOARD *pos);
 void init_chess_engine(void);

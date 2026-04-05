@@ -96,16 +96,11 @@ void drag_event_cb(lv_event_t *e) {
 
 	if (code == LV_EVENT_PRESSED) {
 		/* --- FINGER TOUCH DOWN --- */
-
-		/* 1. Zoom the piece to 150% (45x45) */
-		lv_img_set_zoom(obj, 384);
-
-		/* 2. Bring the piece to the absolute foreground so it overlaps adjacent pieces */
-		lv_obj_move_foreground(obj);
-
-		/* 3. Get the starting square and show the available moves */
+		
 		int from_sq64 = (int) (intptr_t) lv_event_get_user_data(e);
+		lv_img_set_zoom(obj, 384);
 		show_move_markers(SQ120(from_sq64));
+		lv_obj_move_foreground(obj);
 
 	} else if (code == LV_EVENT_PRESSING) {
 		/* --- FINGER DRAGGING --- */
@@ -121,24 +116,16 @@ void drag_event_cb(lv_event_t *e) {
 	}
 
 	else if (code == LV_EVENT_RELEASED) {
-		/* 1. Shrink piece back to normal 100% size */
 		lv_img_set_zoom(obj, 256);
 		clear_move_markers();
 
-		/* 1. Retrieve the original starting square from the object's user_data */
 		int from_sq64 = (int) (intptr_t) lv_event_get_user_data(e);
 		int from_sq120 = SQ120(from_sq64);
 
-		/* 2. Calculate where the finger dropped the piece */
 		lv_coord_t drop_x = lv_obj_get_x(obj) + (SQUARE_SIZE / 2);
 		lv_coord_t drop_y = lv_obj_get_y(obj) + (SQUARE_SIZE / 2);
-
-		/* Convert pixel coordinates to Chess File (0-7) and Rank (0-7) */
-		/* Note: LVGL Y=0 is the TOP of the screen (Rank 8), so we invert Y */
 		int target_file = drop_x / SQUARE_SIZE;
 		int target_rank = 7 - (drop_y / SQUARE_SIZE);
-
-		/* Keep the drop within the 8x8 boundaries */
 		if (target_file < 0)
 			target_file = 0;
 		if (target_file > 7)
@@ -148,23 +135,24 @@ void drag_event_cb(lv_event_t *e) {
 		if (target_rank > 7)
 			target_rank = 7;
 
-		/* 3. Convert target to VICE format */
 		int to_sq64 = (target_rank * 8) + target_file;
 		int to_sq120 = SQ120(to_sq64);
 
-		/* 4. Ask the Engine to process the move */
-		if (attempt_human_move(from_sq120, to_sq120)) {
+		if (check_human_move_valid(from_sq120, to_sq120)) {
 			char from_str[3], to_str[3];
-			printf("%s to %s\n", sq64_to_str(from_sq64, from_str),
+			printf("You: %s to %s\n", sq64_to_str(from_sq64, from_str),
 					sq64_to_str(to_sq64, to_str));
 
 			/* Did the human just checkmate the AI? */
 			if (check_game_over(&engine_board)) {
-				// Optional: You could disable LVGL touches here so the user can't keep playing
 				printf("Game Over!\n");
 			} else {
 				/* AI's Turn */
-				engine_make_move();
+				int chosen_move = engine_make_move();
+				/* Optional: Print what the computer did to your terminal */
+				printf("AI: %s to %s\n",
+						sq64_to_str(SQ64(FROMSQ(chosen_move)), from_str),
+						sq64_to_str(SQ64(TOSQ(chosen_move)), to_str));
 
 				/* Did the AI just checkmate the human? */
 				if (check_game_over(&engine_board)) {
@@ -174,6 +162,7 @@ void drag_event_cb(lv_event_t *e) {
 		} else if (from_sq120 != to_sq120) {
 			printf("Illigal Move\n");
 		}
+
 		render_board_state();
 	}
 }
@@ -190,13 +179,12 @@ void my_flush_cb(lv_display_t *display, const lv_area_t *area, uint8_t *px_map) 
 	uint8_t *source_address = px_map;
 
 	for (uint32_t y = 0; y < flush_height; y++) {
+		// TODO: dma 2d?
 		memcpy(dest_address, source_address, (flush_width * BYTES_PER_PIXEL));
 		source_address += (flush_width * BYTES_PER_PIXEL);
 		dest_address += (screen_width * BYTES_PER_PIXEL);
 	}
 
-	// CRITICAL: You MUST tell LVGL that you have finished flushing!
-	// If you forget this line, LVGL will draw one frame and freeze forever.
 	lv_display_flush_ready(display);
 }
 
@@ -243,9 +231,6 @@ void my_input_read(lv_indev_t *indev, lv_indev_data_t *data) {
 		data->point.y = TsState.Y;
 	} else {
 		data->state = LV_INDEV_STATE_RELEASED;
-		/* Note: You do not need to update data->point.x or y here.
-		 LVGL is smart enough to remember the last known coordinates
-		 internally to handle "click and drag" release events. */
 	}
 }
 
@@ -255,19 +240,13 @@ void update_debug_terminal(StreamBufferHandle_t stream) {
 
     char buf[64];
 
-    /* Pull up to 63 characters per frame out of the RTOS stream buffer.
-     * We use a wait time of 0 ticks so we never block the GUI task!
-     */
     size_t bytes_received = xStreamBufferReceive(stream, buf, sizeof(buf) - 1, 0);
 
     if (bytes_received > 0) {
         /* Guarantee null termination based on exactly how many bytes we grabbed */
         buf[bytes_received] = '\0';
 
-        /* 1. Append the new characters */
         lv_textarea_add_text(objects.debug_terminal, buf);
-
-        /* 2. Get the current text and count the lines */
         const char *text = lv_textarea_get_text(objects.debug_terminal);
         int newline_count = 0;
         const char *ptr = text;
@@ -297,8 +276,6 @@ void update_debug_terminal(StreamBufferHandle_t stream) {
              * prevents LVGL from reading from memory it is trying to free.
              */
             static char safe_buffer[500];
-
-            /* Copy the pruned text into our safe holding area */
             strncpy(safe_buffer, ptr, sizeof(safe_buffer) - 1);
             safe_buffer[sizeof(safe_buffer) - 1] = '\0'; // Guarantee null termination
 
@@ -309,63 +286,50 @@ void update_debug_terminal(StreamBufferHandle_t stream) {
     }
 }
 
-// returns remaining sleeping time
+// returns remaining sleeping time in ms
 uint32_t render_timer_handler() {
-
 	uint32_t time_till_next = lv_timer_handler();
-
 	/*If there is nothing to do now, check again a little bit later.*/
 	if (time_till_next == LV_NO_TIMER_READY) {
-		time_till_next = LV_DEF_REFR_PERIOD; /*33 ms by default in lv_conf.h*/
+		time_till_next = LV_DEF_REFR_PERIOD;
 	}
 	return time_till_next;
 }
 
 void delete_loading_board_spinner(void) {
 	if (objects.loading_board != NULL) {
-		lv_obj_del(objects.loading_board); // Deletes it from the screen and memory
-		objects.loading_board = NULL; // Best practice: nullify the dead pointer
+		lv_obj_del(objects.loading_board);
+		objects.loading_board = NULL;
 	}
 }
 
 void update_memory_bars(void) {
-    /* 1. Get the memory metrics directly from FreeRTOS */
     uint32_t total_ram = configTOTAL_HEAP_SIZE;
     uint32_t free_ram = xPortGetFreeHeapSize();
     uint32_t used_ram = total_ram - free_ram;
 
-    /* 2. Calculate the percentage (0 to 100) */
     int ram_percent = (used_ram * 100) / total_ram;
-
-    /* 3. Update the LVGL Bar Widget */
     if(objects.bar_rtos != NULL) {
         lv_bar_set_value(objects.bar_rtos, ram_percent, LV_ANIM_OFF);
     }
 
-    /* 4. Update the LVGL Label Widget */
     if(objects.label_rtos != NULL) {
-        /* Format: "RAM: 45% (14KB / 32KB)" */
         lv_label_set_text_fmt(objects.label_rtos, "rtos:%d%%(%lu/%luKB)",
                               ram_percent, used_ram / 1024, total_ram / 1024);
     }
 }
 
-/* Put this somewhere above your initialization code */
 void test_button_callback(lv_event_t *e) {
-	/* Get the specific event type that triggered this callback */
 	lv_event_code_t code = lv_event_get_code(e);
-
-	/* Usually, you want LV_EVENT_CLICKED (fires when you press AND release the button) */
 	if (code == LV_EVENT_CLICKED) {
 		printf("reset clicked!\n");
 	}
 }
 
-/* Wipes all red dots from the board */
 void clear_move_markers(void) {
 	for (int i = 0; i < 64; i++) {
 		if (move_markers[i] != NULL) {
-			lv_obj_del(move_markers[i]); /* Safe to delete directly, they aren't the drag target */
+			lv_obj_del(move_markers[i]);
 			move_markers[i] = NULL;
 		}
 	}
