@@ -57,6 +57,7 @@ void InitMvvLva() {
 	}
 }
 
+// Move is legal
 int MoveExists(S_BOARD *pos, const int move) {
 
 	S_MOVELIST list[1];

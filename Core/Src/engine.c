@@ -8,29 +8,18 @@ static S_SEARCHINFO info[1];
 void init_chess_board(S_BOARD* board) {
 	AllInit(); // VICE's internal lookup table setup
 
-	board->HashTable->pTable = NULL;
-	InitHashTableKb(board->HashTable, 4);
+	// board->HashTable->pTable = NULL;
+	// InitHashTableKb(board->HashTable, 4);
 
 	// Load the starting pieces onto the board
 	ParseFen(START_FEN, board);
 }
 
 int engine_make_move(S_BOARD* board) {
-	static int engine_make_move_printed = 1;
-
 	int move;
 
 	move = make_random_move(board);
-	if (engine_make_move_printed) {
-		printf("move=random\n");
-		engine_make_move_printed = 0;
-	}
-
 //	move = make_smart_move(board);
-//	if (engine_make_move_printed) {
-//		printf("move=search\n");
-//		engine_make_move_printed = 0;
-//	}
 
 	ASSERT(MakeMove(board, move));
 	return move;
@@ -136,20 +125,9 @@ int check_human_move_valid(S_BOARD* board, int from_sq, int to_sq) {
 
 
 char* sq64_to_str(int sq64, char *buf) {
-	if (sq64 < 0 || sq64 > 63) {
-		buf[0] = '-';
-		buf[1] = '-';
-		buf[2] = '\0';
-		return buf;
-	}
-
-	int file = sq64 % 8;
-	int rank = sq64 / 8;
-
-	buf[0] = 'a' + file;
-	buf[1] = '1' + rank;
-	buf[2] = '\0';
-
+	int file = FilesBrd[Sq64ToSq120[sq64]];
+	int rank = RanksBrd[Sq64ToSq120[sq64]];
+	sprintf(buf, "%c%c", ('a'+file), ('1'+rank));
 	return buf;
 }
 

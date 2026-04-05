@@ -44,7 +44,8 @@ static void ClearPiece(const int sq, S_BOARD *pos) {
     pos->material[col] -= PieceVal[pce];
 	
 	if(PieceBig[pce]) {
-			pos->bigPce[col]--;
+		pos->bigPce[col]--;
+        
 		if(PieceMaj[pce]) {
 			pos->majPce[col]--;
 		} else {

@@ -32,6 +32,7 @@ int GetPvLine(const int depth, S_BOARD *pos) {
 }
 
 void ClearHashTable(S_HASHTABLE *table) {
+	if (table==NULL) return;
 
   S_HASHENTRY *tableEntry;
   

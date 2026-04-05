@@ -146,7 +146,8 @@ void drag_event_cb(lv_event_t *e) {
 
 		if (check_human_move_valid(&chess_board, from_sq120, to_sq120)) {
 			char from_str[3], to_str[3];
-			printf("You: %s to %s\n", sq64_to_str(from_sq64, from_str),
+			printf("You: %s to %s\n",
+					sq64_to_str(from_sq64, from_str),
 					sq64_to_str(to_sq64, to_str));
 
 			render_board_state();

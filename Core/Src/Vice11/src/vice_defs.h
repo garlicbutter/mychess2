@@ -38,7 +38,7 @@ typedef unsigned long long U64;
 
 #define START_FEN  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
-#define INFINITE 300
+#define INFINITE 30000
 #define ISMATE (INFINITE - MAXDEPTH)
 
 enum { EMPTY, wP, wN, wB, wR, wQ, wK, bP, bN, bB, bR, bQ, bK  };
@@ -182,11 +182,19 @@ typedef struct {
 #define CAPTURED(m) (((m)>>14) & 0xF)
 #define PROMOTED(m) (((m)>>20) & 0xF)
 
+// En passant flag
 #define MFLAGEP 0x40000
+
+// Pawn start flag
 #define MFLAGPS 0x80000
+
+// Castle flag
 #define MFLAGCA 0x1000000
 
+// Capture flag
 #define MFLAGCAP 0x7C000
+
+// Promotion flag
 #define MFLAGPROM 0xF00000
 
 #define NOMOVE 0
