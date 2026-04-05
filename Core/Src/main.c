@@ -33,7 +33,6 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -64,6 +63,7 @@ StreamBufferHandle_t print_stream;
 SemaphoreHandle_t printf_mutex;
 volatile bool is_ai_thinking = false;
 osMutexId lvgl_mutex;
+S_BOARD engine_board;
 
 /* USER CODE END PV */
 
@@ -586,9 +586,9 @@ void StartLvglTask(void const *argument) {
 /* USER CODE END Header_StartChessTask */
 void StartChessTask(void const *argument) {
 	/* USER CODE BEGIN StartChessTask */
-	init_chess_engine();
-	printf("init_chess_engine\n");
-
+	init_chess_board(&engine_board);
+	printf("init_chess_board\n");
+	
 	osMutexWait(lvgl_mutex, osWaitForever);
 	hide_loading_spinner();
 	render_board_state(); // render initial board
@@ -606,7 +606,7 @@ void StartChessTask(void const *argument) {
 			show_loading_spinner();
 			osMutexRelease(lvgl_mutex);
 
-			int chosen_move = engine_make_move();
+			int chosen_move = engine_make_move(&engine_board);
 
 			printf("AI: %s to %s\n",
 					sq64_to_str(SQ64(FROMSQ(chosen_move)), from_str),
