@@ -24,6 +24,7 @@ typedef struct _objects_t {
     lv_obj_t *loading_board;
     lv_obj_t *bar_rtos;
     lv_obj_t *label_rtos;
+    lv_obj_t *crown;
 } objects_t;
 
 extern objects_t objects;

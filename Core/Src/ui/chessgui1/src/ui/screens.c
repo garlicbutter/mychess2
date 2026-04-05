@@ -92,6 +92,15 @@ void create_screen_main() {
             lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
             lv_label_set_text(obj, "rtos");
         }
+        {
+            // crown
+            lv_obj_t *obj = lv_image_create(parent_obj);
+            objects.crown = obj;
+            lv_obj_set_pos(obj, 21, 33);
+            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+            lv_image_set_src(obj, &img_crown);
+            lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
+        }
     }
     
     tick_screen_main();

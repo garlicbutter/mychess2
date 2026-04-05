@@ -37,6 +37,8 @@ void update_memory_bars(void);
 void show_loading_spinner(void);
 void hide_loading_spinner(void);
 
+void show_crown(void);
+
 void drag_event_cb(lv_event_t *e);
 void my_flush_cb(lv_display_t *display, const lv_area_t *area, uint8_t *px_map);
 const void* get_sprite(int vice_piece);

@@ -10,9 +10,9 @@ extern "C" {
 extern S_BOARD chess_board;
 
 void init_chess_board(S_BOARD* board);
-int engine_make_move(S_BOARD* board);
-int make_random_move(S_BOARD* board);
-int make_smart_move(S_BOARD* board);
+int calc_engine_move(S_BOARD* board, int depth);
+int random_engine_move(S_BOARD* board);
+int smart_engine_move(S_BOARD* board, int depth);
 int check_game_over(S_BOARD *board);
 int check_human_move_valid(S_BOARD* board, int from_sq, int to_sq);
 

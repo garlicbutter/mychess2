@@ -14,6 +14,7 @@
     "ui_image_bishop_b.c",
     "ui_image_bishop_w.c",
     "ui_image_board.c",
+    "ui_image_crown.c",
     "ui_image_king_b.c",
     "ui_image_king_w.c",
     "ui_image_knight_b.c",

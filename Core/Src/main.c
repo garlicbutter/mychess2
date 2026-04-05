@@ -65,6 +65,7 @@ SemaphoreHandle_t printf_mutex;
 volatile bool is_ai_thinking = false;
 osMutexId lvgl_mutex;
 S_BOARD chess_board;
+volatile int show_spinning = 1;
 
 /* USER CODE END PV */
 
@@ -175,7 +176,7 @@ int main(void)
   lvglTaskHandle = osThreadCreate(osThread(lvglTask), NULL);
 
   /* definition and creation of chessTask */
-  osThreadDef(chessTask, StartChessTask, osPriorityAboveNormal, 0, 8192);
+  osThreadDef(chessTask, StartChessTask, osPriorityBelowNormal, 0, 2048);
   chessTaskHandle = osThreadCreate(osThread(chessTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
@@ -597,8 +598,9 @@ void StartDefaultTask(void const * argument)
 		if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_SET) {
 			print_rtos_stats();
 			update_memory_bars();
+			render_board_state();
 		}
-		osDelay(3000);
+		osDelay(2000);
 	}
   /* USER CODE END 5 */
 }
@@ -618,6 +620,11 @@ void StartLvglTask(void const * argument)
 	for (;;) {
 		osMutexWait(lvgl_mutex, osWaitForever);
 
+		if (show_spinning) {
+			show_loading_spinner();
+		} else {
+			hide_loading_spinner();
+		}
 		update_debug_terminal(print_stream);
 		uint32_t sleep_time = render_timer_handler();
 
@@ -641,34 +648,33 @@ void StartChessTask(void const * argument)
 	printf("init_chess_board\n");
 	
 	osMutexWait(lvgl_mutex, osWaitForever);
-	hide_loading_spinner();
+	show_spinning = 0;
 	render_board_state(); // render initial board
 	printf("render board\n");
 	osMutexRelease(lvgl_mutex);
 
 	char from_str[3], to_str[3];
+	const int SEARCH_DEPTH = 3;
 
 	/* Infinite loop */
 	for (;;) {
 		osEvent evt = osSignalWait(0x01, osWaitForever);
 
 		if (evt.status == osEventSignal) {
+			show_spinning = 1;
+			int move = calc_engine_move(&chess_board, SEARCH_DEPTH);
+
 			osMutexWait(lvgl_mutex, osWaitForever);
-			show_loading_spinner();
-			osMutexRelease(lvgl_mutex);
 
-			int chosen_move = engine_make_move(&chess_board);
-
-			printf("AI: %s to %s\n",
-					sq64_to_str(SQ64(FROMSQ(chosen_move)), from_str),
-					sq64_to_str(SQ64(TOSQ(chosen_move)), to_str));
+			show_spinning = 0;
+			MakeMove(&chess_board, move);
+			render_board_state();
+			printf("AI : %s to %s\n",
+					sq64_to_str(SQ64(FROMSQ(move)), from_str),
+					sq64_to_str(SQ64(TOSQ(move)), to_str));
 			if (check_game_over(&chess_board)) {
 				printf("Game Over!\n");
 			}
-
-			osMutexWait(lvgl_mutex, osWaitForever);
-			hide_loading_spinner();
-			render_board_state();
 			is_ai_thinking = false;
 			osMutexRelease(lvgl_mutex);
 		}

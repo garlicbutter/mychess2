@@ -15,18 +15,22 @@ void init_chess_board(S_BOARD* board) {
 	ParseFen(START_FEN, board);
 }
 
-int engine_make_move(S_BOARD* board) {
-	int move;
+int calc_engine_move(S_BOARD* board, int depth) {
+	int move = 0;
 
-	move = make_random_move(board);
-//	move = make_smart_move(board);
+	move = smart_engine_move(board, depth);
 
-	ASSERT(MakeMove(board, move));
+	if (move == 0) {
+		printf("fallback to random move\n");
+		move = random_engine_move(board);
+	}
+
+	ASSERT(MoveExists(board, move));
 	return move;
 }
 
 // very crude AI
-int make_random_move(S_BOARD* board) {
+int random_engine_move(S_BOARD* board) {
     S_MOVELIST list[1];
     int legal_moves[256]; // Max possible chess moves in any position is ~218
     int legal_count = 0;
@@ -66,23 +70,18 @@ int make_random_move(S_BOARD* board) {
     return legal_moves[random_index];
 }
 
-int make_smart_move(S_BOARD* board) {
+int smart_engine_move(S_BOARD* board, int depth) {
 
     /* 1. Configure the Search Limits */
-    info->depth = 2;        // Start with 3 half-moves deep. Increase to 4 if it's too fast.
+    info->depth = depth;
     info->timeset = TRUE;  // Tell VICE not to stop based on a clock timer
     info->stoptime = GetTimeMs() + 1000;
     info->quit = FALSE;
     info->nodes = 0;        // Reset node counter
 
     board->ply = 0;   // Reset your ply depth
-
-    /* 2. Run the AI (This will block the CPU until it finishes!) */
     int best_move = SearchPosition(board, info);
-
-    /* 3. Execute the best move if one was found */
     if(best_move != 0) {
-        board->ply = 0; // Reset ply to prevent memory overflow on next turn
         printf("AI(Searched %ld nodes)\n",info->nodes);
     }
 
@@ -153,6 +152,7 @@ int check_game_over(S_BOARD *board) {
                 printf("\nCheckmate! Black wins!\n");
             } else {
                 printf("\nCheckmate! White wins!\n");
+                show_crown();
             }
         } else {
             printf("\nSTALEMATE! Game is a Draw!\n");

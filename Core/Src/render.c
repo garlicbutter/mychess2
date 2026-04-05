@@ -67,10 +67,14 @@ void render_board_state(void) {
 					printf("FATAL: LVGL Out of Memory!\n");
 					return;
 				}
-				lv_obj_add_flag(visual_pieces[sq64], LV_OBJ_FLAG_CLICKABLE);
-				/* Attach the drag callback, and pass its starting square as user_data */
-				lv_obj_add_event_cb(visual_pieces[sq64], drag_event_cb,
-						LV_EVENT_ALL, (void*) (intptr_t) sq64);
+
+//				TODO: make black not draggable..
+//				if (PieceCol[engine_piece] == WHITE) {
+					lv_obj_add_flag(visual_pieces[sq64], LV_OBJ_FLAG_CLICKABLE);
+					/* Attach the drag callback, and pass its starting square as user_data */
+					lv_obj_add_event_cb(visual_pieces[sq64], drag_event_cb,
+							LV_EVENT_ALL, (void*) (intptr_t) sq64);
+//				}
 			}
 
 			/* Update the sprite image (handles pawn promotions automatically!) */
@@ -164,9 +168,9 @@ void drag_event_cb(lv_event_t *e) {
 			}
 
 		} else {
-			if (from_sq120 != to_sq120) {
-				printf("Illigal Move\n");
-			}
+//			if (from_sq120 != to_sq120) {
+//				printf("Illegal Move\n");
+//			}
 			render_board_state();
 		}
 	}
@@ -313,6 +317,12 @@ void show_loading_spinner(void) {
 void hide_loading_spinner(void) {
     if (objects.loading_board != NULL) {
         lv_obj_add_flag(objects.loading_board, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+void show_crown(void) {
+    if (objects.crown != NULL) {
+        lv_obj_clear_flag(objects.crown, LV_OBJ_FLAG_HIDDEN);
     }
 }
 
