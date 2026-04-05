@@ -171,7 +171,7 @@ void drag_event_cb(lv_event_t *e) {
 					printf("Game Over!\n");
 				}
 			}
-		} else {
+		} else if (from_sq120 != to_sq120) {
 			printf("Illigal Move\n");
 		}
 		render_board_state();
@@ -328,6 +328,28 @@ void delete_loading_board_spinner(void) {
 		lv_obj_del(objects.loading_board); // Deletes it from the screen and memory
 		objects.loading_board = NULL; // Best practice: nullify the dead pointer
 	}
+}
+
+void update_memory_bars(void) {
+    /* 1. Get the memory metrics directly from FreeRTOS */
+    uint32_t total_ram = configTOTAL_HEAP_SIZE;
+    uint32_t free_ram = xPortGetFreeHeapSize();
+    uint32_t used_ram = total_ram - free_ram;
+
+    /* 2. Calculate the percentage (0 to 100) */
+    int ram_percent = (used_ram * 100) / total_ram;
+
+    /* 3. Update the LVGL Bar Widget */
+    if(objects.bar_rtos != NULL) {
+        lv_bar_set_value(objects.bar_rtos, ram_percent, LV_ANIM_OFF);
+    }
+
+    /* 4. Update the LVGL Label Widget */
+    if(objects.label_rtos != NULL) {
+        /* Format: "RAM: 45% (14KB / 32KB)" */
+        lv_label_set_text_fmt(objects.label_rtos, "rtos:%d%%(%lu/%luKB)",
+                              ram_percent, used_ram / 1024, total_ram / 1024);
+    }
 }
 
 /* Put this somewhere above your initialization code */

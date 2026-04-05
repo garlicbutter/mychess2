@@ -182,7 +182,7 @@ void init_chess_engine(void) {
 	AllInit(); // VICE's internal lookup table setup
 
 	engine_board.HashTable->pTable = NULL;
-	InitHashTableKb(engine_board.HashTable, 1);
+	InitHashTableKb(engine_board.HashTable, 4);
 
 	// Load the starting pieces onto the board
 	ParseFen(START_FEN, &engine_board);

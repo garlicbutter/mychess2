@@ -43,7 +43,7 @@ void create_screen_main() {
             lv_obj_t *obj = lv_textarea_create(parent_obj);
             objects.debug_terminal = obj;
             lv_obj_set_pos(obj, 0, 240);
-            lv_obj_set_size(obj, 180, 80);
+            lv_obj_set_size(obj, 240, 72);
             lv_textarea_set_max_length(obj, 256);
             lv_textarea_set_one_line(obj, false);
             lv_textarea_set_password_mode(obj, false);
@@ -53,8 +53,8 @@ void create_screen_main() {
             // button1
             lv_obj_t *obj = lv_button_create(parent_obj);
             objects.button1 = obj;
-            lv_obj_set_pos(obj, 180, 240);
-            lv_obj_set_size(obj, 60, 40);
+            lv_obj_set_pos(obj, 193, 240);
+            lv_obj_set_size(obj, 46, 20);
             {
                 lv_obj_t *parent_obj = obj;
                 {
@@ -74,6 +74,23 @@ void create_screen_main() {
             objects.loading_board = obj;
             lv_obj_set_pos(obj, 72, 68);
             lv_obj_set_size(obj, 96, 104);
+        }
+        {
+            // bar_rtos
+            lv_obj_t *obj = lv_bar_create(parent_obj);
+            objects.bar_rtos = obj;
+            lv_obj_set_pos(obj, 0, 312);
+            lv_obj_set_size(obj, 241, 8);
+            lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICKABLE);
+            add_style_green(obj);
+        }
+        {
+            // label_rtos
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.label_rtos = obj;
+            lv_obj_set_pos(obj, 0, 308);
+            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+            lv_label_set_text(obj, "rtos");
         }
     }
     

@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-#include "queue.h"
+#include "cmsis_os.h"
 
 #include "lvgl/lvgl.h"
 #include "ui.h"
@@ -29,6 +29,7 @@ void render_init(void);
 void render_board_state(void);
 uint32_t render_timer_handler(void);
 
+void update_memory_bars(void);
 void delete_loading_board_spinner(void);
 
 void drag_event_cb(lv_event_t *e);

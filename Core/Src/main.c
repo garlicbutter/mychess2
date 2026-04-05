@@ -25,8 +25,6 @@
 /* USER CODE BEGIN Includes */
 #include "stdio.h"
 #include "stdlib.h"
-#include "queue.h"
-
 #include "engine.h"
 #include "render.h"
 
@@ -157,7 +155,7 @@ int main(void)
 
   /* Create the thread(s) */
   /* definition and creation of defaultTask */
-  osThreadDef(defaultTask, StartDefaultTask, osPriorityIdle, 0, 128);
+  osThreadDef(defaultTask, StartDefaultTask, osPriorityIdle, 0, 512);
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
   /* definition and creation of lvglTask */
@@ -165,7 +163,7 @@ int main(void)
   lvglTaskHandle = osThreadCreate(osThread(lvglTask), NULL);
 
   /* definition and creation of chessTask */
-  osThreadDef(chessTask, StartChessTask, osPriorityAboveNormal, 0, 4096);
+  osThreadDef(chessTask, StartChessTask, osPriorityAboveNormal, 0, 8192);
   chessTaskHandle = osThreadCreate(osThread(chessTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
@@ -476,6 +474,44 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void print_rtos_stats(void)
+{
+	// Total free heap right now
+	printf("FreeHeap:%u bytes\n", (unsigned int)xPortGetFreeHeapSize());
+
+	// The lowest the heap has ever dropped (historical minimum)
+	printf("LowestEverFreeHeap:%u bytes\n", (unsigned int)xPortGetMinimumEverFreeHeapSize());
+
+    // 1. Get the total number of tasks currently running
+    UBaseType_t uxArraySize = uxTaskGetNumberOfTasks();
+
+    // 2. Allocate an array of TaskStatus_t structures to hold the data
+    TaskStatus_t* pxTaskStatusArray = pvPortMalloc(uxArraySize * sizeof(TaskStatus_t));
+
+    if (pxTaskStatusArray != NULL)
+    {
+        // 3. Fill the array with the raw task data
+        // (The NULL parameter is for run-time stats, which we don't need here)
+        uxArraySize = uxTaskGetSystemState(pxTaskStatusArray, uxArraySize, NULL);
+
+        printf("T_Name, HWM\n");
+        // 4. Loop through the array and print ONLY the Name and HWM
+        for (UBaseType_t i = 0; i < uxArraySize; i++)
+        {
+        	// Print up to 5 characters, left-justified with a width of 5
+			printf("%-5.5s %u\r\n",
+				   pxTaskStatusArray[i].pcTaskName,
+				   (unsigned int)pxTaskStatusArray[i].usStackHighWaterMark);
+        }
+
+        // 5. Always free the memory you allocated!
+        vPortFree(pxTaskStatusArray);
+    }
+    else
+    {
+        printf("Not enough heap to generate task list!\r\n");
+    }
+}
 
 /* Intercept printf and send characters to our RTOS queue */
 int _write(int file, char *ptr, int len) {
@@ -509,6 +545,10 @@ void StartDefaultTask(void const * argument)
 	/* Infinite loop */
 	for (;;) {
 		HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+		if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_SET) {
+			print_rtos_stats();
+			update_memory_bars();
+		}
 		osDelay(1000);
 	}
   /* USER CODE END 5 */
