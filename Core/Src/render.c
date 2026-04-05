@@ -49,7 +49,7 @@ void render_board_state(void) {
 
 		/* Ask VICE what piece is on this square */
 		int sq120 = SQ120(sq64);
-		int engine_piece = engine_board.pieces[sq120];
+		int engine_piece = chess_board.pieces[sq120];
 
 		/* Calculate pixel coordinates. (Inverting Y so Rank 1 is at the bottom) */
 		int file = sq64 % 8;
@@ -144,7 +144,7 @@ void drag_event_cb(lv_event_t *e) {
 		int to_sq64 = (target_rank * 8) + target_file;
 		int to_sq120 = SQ120(to_sq64);
 
-		if (check_human_move_valid(&engine_board, from_sq120, to_sq120)) {
+		if (check_human_move_valid(&chess_board, from_sq120, to_sq120)) {
 			char from_str[3], to_str[3];
 			printf("You: %s to %s\n", sq64_to_str(from_sq64, from_str),
 					sq64_to_str(to_sq64, to_str));
@@ -152,7 +152,7 @@ void drag_event_cb(lv_event_t *e) {
 			render_board_state();
 
 			/* Did the human just checkmate the AI? */
-			if (check_game_over(&engine_board)) {
+			if (check_game_over(&chess_board)) {
 				printf("Game Over!\n");
 			} else {
 				/* AI's Turn */
@@ -350,7 +350,7 @@ void clear_move_markers(void) {
 /* Asks VICE for legal moves for ONE piece, and draws dots on the targets */
 void show_move_markers(int from_sq120) {
 	S_MOVELIST list[1];
-	GenerateAllMoves(&engine_board, list);
+	GenerateAllMoves(&chess_board, list);
 
 	for (int moveNum = 0; moveNum < list->count; ++moveNum) {
 		int move = list->moves[moveNum].move;
@@ -359,7 +359,7 @@ void show_move_markers(int from_sq120) {
 		if (FROMSQ(move) == from_sq120) {
 
 			/* Test if the move is actually legal (doesn't leave King in check) */
-			if (MakeMove(&engine_board, move)) {
+			if (MakeMove(&chess_board, move)) {
 
 				int to_sq64 = SQ64(TOSQ(move));
 				int file = to_sq64 % 8;
@@ -385,7 +385,7 @@ void show_move_markers(int from_sq120) {
 				}
 
 				/* Undo the test move! */
-				TakeMove(&engine_board);
+				TakeMove(&chess_board);
 			}
 		}
 	}

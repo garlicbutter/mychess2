@@ -7,7 +7,7 @@ extern "C" {
 
 #include "vice_defs.h"
 
-extern S_BOARD engine_board;
+extern S_BOARD chess_board;
 
 void init_chess_board(S_BOARD* board);
 int engine_make_move(S_BOARD* board);

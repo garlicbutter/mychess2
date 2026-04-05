@@ -63,7 +63,7 @@ StreamBufferHandle_t print_stream;
 SemaphoreHandle_t printf_mutex;
 volatile bool is_ai_thinking = false;
 osMutexId lvgl_mutex;
-S_BOARD engine_board;
+S_BOARD chess_board;
 
 /* USER CODE END PV */
 
@@ -586,7 +586,7 @@ void StartLvglTask(void const *argument) {
 /* USER CODE END Header_StartChessTask */
 void StartChessTask(void const *argument) {
 	/* USER CODE BEGIN StartChessTask */
-	init_chess_board(&engine_board);
+	init_chess_board(&chess_board);
 	printf("init_chess_board\n");
 	
 	osMutexWait(lvgl_mutex, osWaitForever);
@@ -606,12 +606,12 @@ void StartChessTask(void const *argument) {
 			show_loading_spinner();
 			osMutexRelease(lvgl_mutex);
 
-			int chosen_move = engine_make_move(&engine_board);
+			int chosen_move = engine_make_move(&chess_board);
 
 			printf("AI: %s to %s\n",
 					sq64_to_str(SQ64(FROMSQ(chosen_move)), from_str),
 					sq64_to_str(SQ64(TOSQ(chosen_move)), to_str));
-			if (check_game_over(&engine_board)) {
+			if (check_game_over(&chess_board)) {
 				printf("Game Over!\n");
 			}
 
