@@ -667,7 +667,7 @@ void StartChessTask(void const * argument)
 				osMutexWait(lvgl_mutex, osWaitForever);
 				TakeMove(&chess_board);
 				TakeMove(&chess_board);
-				print("take back!\n");
+				printf("take back!\n");
 				render_board_state();
 				osMutexRelease(lvgl_mutex);
 				continue;
