@@ -15,10 +15,10 @@ void init_chess_board(S_BOARD* board) {
 	ParseFen(START_FEN, board);
 }
 
-int calc_engine_move(S_BOARD* board, int depth) {
+int calc_engine_move(S_BOARD* board, int depth, int timeout_ms) {
 	int move = 0;
 
-	move = smart_engine_move(board, depth);
+	move = smart_engine_move(board, depth, timeout_ms);
 
 	if (move == 0) {
 		printf("fallback to random move\n");
@@ -70,12 +70,12 @@ int random_engine_move(S_BOARD* board) {
     return legal_moves[random_index];
 }
 
-int smart_engine_move(S_BOARD* board, int depth) {
+int smart_engine_move(S_BOARD* board, int depth, int timeout_ms) {
 
     /* 1. Configure the Search Limits */
     info->depth = depth;
     info->timeset = TRUE;  // Tell VICE not to stop based on a clock timer
-    info->stoptime = GetTimeMs() + 1000;
+    info->stoptime = GetTimeMs() + timeout_ms;
     info->quit = FALSE;
     info->nodes = 0;        // Reset node counter
 

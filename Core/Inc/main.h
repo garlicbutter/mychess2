@@ -40,6 +40,7 @@ extern "C" {
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
 extern volatile bool is_ai_thinking;
+extern volatile bool take_back_requested;
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/

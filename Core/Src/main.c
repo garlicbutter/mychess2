@@ -63,6 +63,7 @@ osThreadId chessTaskHandle;
 StreamBufferHandle_t print_stream;
 SemaphoreHandle_t printf_mutex;
 volatile bool is_ai_thinking = false;
+volatile bool take_back_requested = false;
 osMutexId lvgl_mutex;
 S_BOARD chess_board;
 volatile int show_spinning = 1;
@@ -654,15 +655,26 @@ void StartChessTask(void const * argument)
 	osMutexRelease(lvgl_mutex);
 
 	char from_str[3], to_str[3];
-	const int SEARCH_DEPTH = 3;
+	const int SEARCH_DEPTH = 4;
+	const int SEARCH_TIMEOUT = 1500;
 
 	/* Infinite loop */
 	for (;;) {
 		osEvent evt = osSignalWait(0x01, osWaitForever);
 
 		if (evt.status == osEventSignal) {
+			if (take_back_requested) {
+				osMutexWait(lvgl_mutex, osWaitForever);
+				TakeMove(&chess_board);
+				TakeMove(&chess_board);
+				print("take back!\n");
+				render_board_state();
+				osMutexRelease(lvgl_mutex);
+				continue;
+			}
+
 			show_spinning = 1;
-			int move = calc_engine_move(&chess_board, SEARCH_DEPTH);
+			int move = calc_engine_move(&chess_board, SEARCH_DEPTH, SEARCH_TIMEOUT);
 
 			osMutexWait(lvgl_mutex, osWaitForever);
 
@@ -676,6 +688,7 @@ void StartChessTask(void const * argument)
 				printf("Game Over!\n");
 			}
 			is_ai_thinking = false;
+			take_back_requested = false;
 			osMutexRelease(lvgl_mutex);
 		}
 	}

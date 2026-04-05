@@ -50,21 +50,19 @@ void create_screen_main() {
             lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM);
         }
         {
-            // button1
+            // test_button
             lv_obj_t *obj = lv_button_create(parent_obj);
-            objects.button1 = obj;
+            objects.test_button = obj;
             lv_obj_set_pos(obj, 193, 240);
-            lv_obj_set_size(obj, 46, 20);
+            lv_obj_set_size(obj, 46, 36);
             {
                 lv_obj_t *parent_obj = obj;
                 {
-                    // test_button
                     lv_obj_t *obj = lv_label_create(parent_obj);
-                    objects.test_button = obj;
                     lv_obj_set_pos(obj, 0, 0);
                     lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
                     lv_obj_set_style_align(obj, LV_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
-                    lv_label_set_text(obj, "TEST");
+                    lv_label_set_text(obj, "take\nback");
                 }
             }
         }

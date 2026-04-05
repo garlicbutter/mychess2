@@ -163,6 +163,7 @@ void drag_event_cb(lv_event_t *e) {
 				/* AI's Turn */
 				if (registerChessTaskHandle != NULL) {
 					is_ai_thinking = true;
+					take_back_requested = false;
 					osSignalSet(registerChessTaskHandle, 0x01);
 				}
 			}
@@ -345,7 +346,10 @@ void update_memory_bars(void) {
 void test_button_callback(lv_event_t *e) {
 	lv_event_code_t code = lv_event_get_code(e);
 	if (code == LV_EVENT_CLICKED) {
-		printf("reset clicked!\n");
+		if (registerChessTaskHandle != NULL) {
+			take_back_requested = true;
+			osSignalSet(registerChessTaskHandle, 0x01);
+		}
 	}
 }
 

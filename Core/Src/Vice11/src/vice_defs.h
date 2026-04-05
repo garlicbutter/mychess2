@@ -34,7 +34,7 @@ typedef unsigned long long U64;
 
 #define MAXGAMEMOVES 256 // originally 2048, TODO: see how much I can afford
 #define MAXPOSITIONMOVES 256
-#define MAXDEPTH 4 // originally 64, TODO: see how deep I can go on this MCU
+#define MAXDEPTH 6 // originally 64, TODO: see how deep I can go on this MCU
 
 #define START_FEN  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 

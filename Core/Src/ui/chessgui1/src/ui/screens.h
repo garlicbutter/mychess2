@@ -19,7 +19,6 @@ typedef struct _objects_t {
     lv_obj_t *main;
     lv_obj_t *chessboard;
     lv_obj_t *debug_terminal;
-    lv_obj_t *button1;
     lv_obj_t *test_button;
     lv_obj_t *loading_board;
     lv_obj_t *bar_rtos;
