@@ -668,7 +668,7 @@ void StartChessTask(void const * argument)
 
 	char from_str[3], to_str[3];
 	const int SEARCH_DEPTH = 7;
-	const int SEARCH_TIMEOUT = 2000;
+	const int SEARCH_TIMEOUT = 4000;
 
 	/* Infinite loop */
 	for (;;) {
