@@ -1,8 +1,5 @@
 // search.c
-
-#include "stdio.h"
 #include "vice_defs.h"
-#include "cmsis_os.h" // Needed for osDelay
 #include "stm32f4xx_hal.h"
 
 S_MOVELIST engine_move_lists[MAXDEPTH];
@@ -28,6 +25,25 @@ static int IsRepetition(const S_BOARD *pos) {
 		}
 	}
 	return FALSE;
+}
+
+// Swap the move with the highest score to the current index
+static void PickNextMove(int moveNum, S_MOVELIST *list) {
+    int bestScore = 0;
+    int bestNum = moveNum;
+
+    // Find the move with the highest score from moveNum to the end of the list
+    for (int index = moveNum; index < list->count; ++index) {
+        if (list->moves[index].score > bestScore) {
+            bestScore = list->moves[index].score;
+            bestNum = index;
+        }
+    }
+
+    // Swap the best move we found into the current moveNum position
+    S_MOVE temp = list->moves[moveNum];
+    list->moves[moveNum] = list->moves[bestNum];
+    list->moves[bestNum] = temp;
 }
 
 static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info) {
@@ -99,6 +115,7 @@ static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO 
 int SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
     int bestMove = 0; // NOMOVE
     int bestScore = -INFINITE;
+    int PvMove = 0;
 
     info->best_score = 0;
     info->stopped = FALSE;
@@ -115,6 +132,15 @@ int SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
         S_MOVELIST *moves_list = &engine_move_lists[currentDepth];
         GenerateAllMoves(pos, moves_list);
 
+        for (int i = 0; i < moves_list->count; ++i) {
+			if (moves_list->moves[i].move == PvMove) {
+				// Give the PV move a massive score so it is always picked first
+				moves_list->moves[i].score = 2000000;
+			} else {
+				moves_list->moves[i].score = 0;
+			}
+		}
+
         int alpha = -INFINITE;
         int beta = INFINITE;
         int currentDepthBestMove = 0;
@@ -122,6 +148,8 @@ int SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
 
         // The Root Move Loop (Depth 0 of the tree)
         for (int i = 0; i < moves_list->count; ++i) {
+        	PickNextMove(i, moves_list); // Brings the highest scoring move to index 'i'
+
             int move = moves_list->moves[i].move;
 
             if (!MakeMove(pos, move)) {
@@ -153,26 +181,10 @@ int SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
         }
 
         // If we completed this depth safely, update the overall bests
-        bestMove = currentDepthBestMove;
+        PvMove = bestMove = currentDepthBestMove;
         info->best_score = bestScore = currentDepthBestScore;
         info->depth_searched = currentDepth;
     }
 
     return bestMove;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
