@@ -667,7 +667,7 @@ void StartChessTask(void const * argument)
 	osMutexRelease(lvgl_mutex);
 
 	char from_str[3], to_str[3];
-	const int SEARCH_DEPTH = 4;
+	const int SEARCH_DEPTH = 7;
 	const int SEARCH_TIMEOUT = 2000;
 
 	/* Infinite loop */
