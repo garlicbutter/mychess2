@@ -100,8 +100,11 @@ int SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
     int bestMove = 0; // NOMOVE
     int bestScore = -INFINITE;
 
+    info->best_score = 0;
     info->stopped = FALSE;
     info->nodes = 0;
+    info->depth_searched = 0;
+    info->quit = FALSE;
 
     // ITERATIVE DEEPENING LOOP
     // Start at depth 1 and go up to the target depth.
@@ -151,7 +154,8 @@ int SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
 
         // If we completed this depth safely, update the overall bests
         bestMove = currentDepthBestMove;
-        bestScore = currentDepthBestScore;
+        info->best_score = bestScore = currentDepthBestScore;
+        info->depth_searched = currentDepth;
     }
 
     return bestMove;

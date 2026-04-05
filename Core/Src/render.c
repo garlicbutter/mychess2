@@ -244,58 +244,56 @@ void my_input_read(lv_indev_t *indev, lv_indev_data_t *data) {
 	}
 }
 
-void update_debug_terminal(StreamBufferHandle_t stream) {
-	if (stream == NULL || objects.debug_terminal == NULL)
+void update_debug_terminal(const char* new_text) {
+	lv_obj_t * text_area = objects.debug_terminal;
+	if (text_area == NULL || new_text == NULL)
 		return;
 
-	char buf[64];
+	// Clamp max_len to safely fit inside our static buffer
+	uint32_t max_len = lv_textarea_get_max_length(text_area);
 
-	size_t bytes_received = xStreamBufferReceive(stream, buf, sizeof(buf) - 1,
-			0);
+	const char *current_text = lv_textarea_get_text(text_area);
+	uint32_t current_len = strlen(current_text);
+	uint32_t new_len = strlen(new_text);
 
-	if (bytes_received > 0) {
-		/* Guarantee null termination based on exactly how many bytes we grabbed */
-		buf[bytes_received] = '\0';
-
-		lv_textarea_add_text(objects.debug_terminal, buf);
-		const char *text = lv_textarea_get_text(objects.debug_terminal);
-		int newline_count = 0;
-		const char *ptr = text;
-
-		while (*ptr) {
-			if (*ptr == '\n') {
-				newline_count++;
-			}
-			ptr++;
-		}
-
-		/* 3. If we exceed 10 lines, chop off the oldest ones safely */
-		if (newline_count > 10) {
-			int lines_to_remove = newline_count - 10;
-			ptr = text;
-
-			/* Move pointer forward until we pass the old lines */
-			while (lines_to_remove > 0 && *ptr) {
-				if (*ptr == '\n') {
-					lines_to_remove--;
-				}
-				ptr++;
-			}
-
-			/* THE FIX: Use a static buffer. It stays in global memory,
-			 * so it won't crash your FreeRTOS stack, and it completely
-			 * prevents LVGL from reading from memory it is trying to free.
-			 */
-			static char safe_buffer[500];
-			strncpy(safe_buffer, ptr, sizeof(safe_buffer) - 1);
-			safe_buffer[sizeof(safe_buffer) - 1] = '\0'; // Guarantee null termination
-
-			/* Now update LVGL safely */
-			lv_textarea_set_text(objects.debug_terminal, safe_buffer);
-			lv_obj_scroll_to_y(objects.debug_terminal, LV_COORD_MAX,
-					LV_ANIM_OFF);
-		}
+	// 1. If there is enough space, append natively safely at the END
+	if (current_len + new_len <= max_len) {
+		lv_textarea_set_cursor_pos(text_area, LV_TEXTAREA_CURSOR_LAST);
+		lv_textarea_add_text(text_area, new_text);
+		lv_obj_scroll_to_y(text_area, LV_COORD_MAX, LV_ANIM_OFF);
+		return;
 	}
+
+	static char buffer[512 + 1];
+
+	// 2. Edge Case: If the new text is massively long, just grab the tail end of it
+	if (new_len >= max_len) {
+		strncpy(buffer, new_text + (new_len - max_len), max_len);
+		buffer[max_len] = '\0';
+	}
+	// 3. Standard Rolling Logic
+	else {
+		uint32_t overflow = (current_len + new_len) - max_len;
+		const char * cut_pos = current_text + overflow;
+
+		// Find the next newline to avoid cutting words/lines cleanly in half
+		const char * next_newline = strchr(cut_pos, '\n');
+		if (next_newline) {
+			cut_pos = next_newline + 1; // Shift pointer to start immediately after the \n
+		}
+
+		uint32_t keep_len = current_len - (cut_pos - current_text);
+
+		// Assemble the final string
+		strncpy(buffer, cut_pos, keep_len);
+		buffer[keep_len] = '\0'; // Ensure null-termination
+		strncat(buffer, new_text, max_len - keep_len);
+	}
+
+	// 4. Overwrite the text area completely and reset cursor/scroll
+	lv_textarea_set_text(text_area, buffer);
+	lv_textarea_set_cursor_pos(text_area, LV_TEXTAREA_CURSOR_LAST);
+	lv_obj_scroll_to_y(text_area, LV_COORD_MAX, LV_ANIM_OFF);
 }
 
 // returns remaining sleeping time in ms

@@ -66,7 +66,8 @@ volatile bool is_ai_thinking = false;
 volatile bool take_back_requested = false;
 osMutexId lvgl_mutex;
 S_BOARD chess_board;
-volatile int show_spinning = 1;
+volatile bool show_spinning = true;
+volatile bool user_button_flag = false;
 
 /* USER CODE END PV */
 
@@ -570,11 +571,7 @@ int _write(int file, char *ptr, int len) {
 
 		/* 1. Ask for the key. Wait forever (portMAX_DELAY) if another task has it. */
 		if (xSemaphoreTake(printf_mutex, portMAX_DELAY) == pdTRUE) {
-
-			/* 2. We have the lock! It is now 100% safe to send the data. */
 			xStreamBufferSend(print_stream, ptr, len, portMAX_DELAY);
-
-			/* 3. Give the key back so other tasks can print. */
 			xSemaphoreGive(printf_mutex);
 		}
 	}
@@ -597,11 +594,9 @@ void StartDefaultTask(void const * argument)
 	for (;;) {
 		HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
 		if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_SET) {
-			print_rtos_stats();
-			update_memory_bars();
-			render_board_state();
+			user_button_flag = true;
 		}
-		osDelay(2000);
+		osDelay(500);
 	}
   /* USER CODE END 5 */
 }
@@ -617,18 +612,35 @@ void StartLvglTask(void const * argument)
 {
   /* USER CODE BEGIN StartLvglTask */
 	printf("StartLvglTask\n");
+	static char debug_buf[256];
+
 	/* Infinite loop */
 	for (;;) {
 		osMutexWait(lvgl_mutex, osWaitForever);
-
 		if (show_spinning) {
 			show_loading_spinner();
 		} else {
 			hide_loading_spinner();
 		}
-		update_debug_terminal(print_stream);
-		uint32_t sleep_time = render_timer_handler();
+		if (user_button_flag){
+			print_rtos_stats();
+			update_memory_bars();
+			user_button_flag = false;
+		}
 
+		if (print_stream != NULL && printf_mutex != NULL) {
+			if (xSemaphoreTake(printf_mutex, portMAX_DELAY) == pdTRUE) {
+				size_t bytes_received = xStreamBufferReceive(print_stream, debug_buf, sizeof(debug_buf) - 1, 0);
+				if (bytes_received > 0) {
+					/* Guarantee null termination based on exactly how many bytes we grabbed */
+					debug_buf[bytes_received] = '\0';
+					update_debug_terminal(debug_buf);
+				}
+				xSemaphoreGive(printf_mutex);
+			}
+		}
+
+		uint32_t sleep_time = render_timer_handler();
 		osMutexRelease(lvgl_mutex);
 		osDelay(sleep_time); /*Sleep the thread*/
 	}
@@ -649,14 +661,14 @@ void StartChessTask(void const * argument)
 	printf("init_chess_board\n");
 	
 	osMutexWait(lvgl_mutex, osWaitForever);
-	show_spinning = 0;
+	show_spinning = false;
 	render_board_state(); // render initial board
 	printf("render board\n");
 	osMutexRelease(lvgl_mutex);
 
 	char from_str[3], to_str[3];
 	const int SEARCH_DEPTH = 4;
-	const int SEARCH_TIMEOUT = 1500;
+	const int SEARCH_TIMEOUT = 2000;
 
 	/* Infinite loop */
 	for (;;) {
@@ -673,12 +685,12 @@ void StartChessTask(void const * argument)
 				continue;
 			}
 
-			show_spinning = 1;
+			show_spinning = true;
 			int move = calc_engine_move(&chess_board, SEARCH_DEPTH, SEARCH_TIMEOUT);
 
 			osMutexWait(lvgl_mutex, osWaitForever);
 
-			show_spinning = 0;
+			show_spinning = false;
 			MakeMove(&chess_board, move);
 			render_board_state();
 			printf("AI : %s to %s\n",

@@ -74,17 +74,16 @@ int smart_engine_move(S_BOARD* board, int depth, int timeout_ms) {
 
     /* 1. Configure the Search Limits */
     info->depth = depth;
-    info->timeset = TRUE;  // Tell VICE not to stop based on a clock timer
-    info->stoptime = GetTimeMs() + timeout_ms;
-    info->quit = FALSE;
-    info->nodes = 0;        // Reset node counter
+    if (timeout_ms) {
+		info->timeset = TRUE;
+		info->stoptime = GetTimeMs() + timeout_ms;
+    } else {
+		info->timeset = FALSE;  // no timeout
+    }
 
     board->ply = 0;   // Reset your ply depth
     int best_move = SearchPosition(board, info);
-    if(best_move != 0) {
-        printf("AI(Searched %ld nodes)\n",info->nodes);
-    }
-
+	printf("## D%d,N%ld,SC:%d\n",info->depth_searched, info->nodes, info->best_score);
 	return best_move;
 }
 

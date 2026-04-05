@@ -55,6 +55,7 @@ void create_screen_main() {
             objects.test_button = obj;
             lv_obj_set_pos(obj, 193, 240);
             lv_obj_set_size(obj, 46, 36);
+            add_style_transp_btn(obj);
             {
                 lv_obj_t *parent_obj = obj;
                 {
@@ -70,8 +71,8 @@ void create_screen_main() {
             // loading_board
             lv_obj_t *obj = lv_spinner_create(parent_obj);
             objects.loading_board = obj;
-            lv_obj_set_pos(obj, 72, 68);
-            lv_obj_set_size(obj, 96, 104);
+            lv_obj_set_pos(obj, 45, 28);
+            lv_obj_set_size(obj, 151, 185);
         }
         {
             // bar_rtos
@@ -86,7 +87,7 @@ void create_screen_main() {
             // label_rtos
             lv_obj_t *obj = lv_label_create(parent_obj);
             objects.label_rtos = obj;
-            lv_obj_set_pos(obj, 0, 308);
+            lv_obj_set_pos(obj, 7, 306);
             lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
             lv_label_set_text(obj, "rtos");
         }
