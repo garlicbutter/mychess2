@@ -255,6 +255,7 @@ int MakeMove(S_BOARD *pos, int move) {
 }
 
 void TakeMove(S_BOARD *pos) {
+	// TODO: there's a bug to call this at new board
 	
 	ASSERT(CheckBoard(pos));
 	

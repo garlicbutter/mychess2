@@ -26,7 +26,7 @@ LV_IMG_DECLARE(img_king_b)
 LV_IMG_DECLARE(img_red_dot)
 
 extern volatile bool is_ai_thinking;
-extern volatile bool take_back_requested;
+extern volatile int take_back_requested;
 
 void render_init(void);
 void render_board_state(void);
@@ -50,6 +50,7 @@ void show_white_victory(void);
 void show_white_defeat(void);
 void show_stalemate(void);
 
+void enable_take_back_button(void);
 void disable_take_back_button(void);
 
 extern osThreadId registerChessTaskHandle;

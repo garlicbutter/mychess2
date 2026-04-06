@@ -51,9 +51,10 @@ typedef enum {
 } PlayerColor_t;
 
 typedef enum {
-	EngineInit=0x01,
-    EngineNextMove,
-} EngineSignal_t;
+	ChessInitSignal=(1<<0),
+    ChessEngineNextMoveSignal=(1<<1),
+	ChessTakeBackSignal=(1<<2),
+} ChessSignal_t;
 
 
 extern GameMode_t current_game_mode;

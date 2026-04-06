@@ -63,10 +63,10 @@ osThreadId chessTaskHandle;
 StreamBufferHandle_t print_stream;
 SemaphoreHandle_t printf_mutex;
 volatile bool is_ai_thinking = false;
-volatile bool take_back_requested = false;
+volatile int take_back_requested = 0;
 osMutexId lvgl_mutex;
 S_BOARD chess_board;
-volatile bool show_spinning = true;
+volatile bool show_spinning = false;
 volatile bool user_button_flag = false;
 osThreadId registerChessTaskHandle = NULL;
 
@@ -660,10 +660,9 @@ void StartChessTask(void const * argument)
   /* USER CODE BEGIN StartChessTask */
 	init_chess_board(&chess_board);
 	printf("init_chess_board\n");
+	osSignalWait(ChessInitSignal, osWaitForever);
 	
-	osSignalWait(EngineInit, osWaitForever);
 	osMutexWait(lvgl_mutex, osWaitForever);
-	show_spinning = false;
 	render_board_state(); // render initial board
 	printf("render board\n");
 	osMutexRelease(lvgl_mutex);
@@ -674,36 +673,55 @@ void StartChessTask(void const * argument)
 
 	/* Infinite loop */
 	for (;;) {
-		osEvent evt = osSignalWait(EngineNextMove, osWaitForever);
+		osEvent evt = osSignalWait(
+				ChessTakeBackSignal | ChessEngineNextMoveSignal, osWaitForever);
 
 		if (evt.status == osEventSignal) {
-			if (take_back_requested) {
+			int signals_received = evt.value.signals;
+
+			if (signals_received & ChessTakeBackSignal) {
+				if (!is_ai_thinking) {
+					osMutexWait(lvgl_mutex, osWaitForever);
+					if (take_back_requested) {
+						int moves_to_undo = take_back_requested;
+						if (moves_to_undo > chess_board.hisPly) {
+							moves_to_undo = chess_board.hisPly;
+						}
+						if (moves_to_undo) {
+							printf("take back!\n");
+						}
+						for (int i=0; i<moves_to_undo; i++) {
+							TakeMove(&chess_board);
+						}
+						render_board_state();
+					}
+					take_back_requested = 0;
+					osMutexRelease(lvgl_mutex);
+				}
+
+			}
+
+			if (signals_received & ChessEngineNextMoveSignal) {
 				osMutexWait(lvgl_mutex, osWaitForever);
-				TakeMove(&chess_board);
-				TakeMove(&chess_board);
-				printf("take back!\n");
-				render_board_state();
+				disable_take_back_button();
+				show_spinning = true;
 				osMutexRelease(lvgl_mutex);
-				continue;
+
+				int move = calc_engine_move(&chess_board, SEARCH_DEPTH, SEARCH_TIMEOUT);
+
+				osMutexWait(lvgl_mutex, osWaitForever);
+				MakeMove(&chess_board, move);
+				render_board_state();
+				show_spinning = false;
+				printf("AI : %s to %s\n",
+						sq64_to_str(SQ64(FROMSQ(move)), from_str),
+						sq64_to_str(SQ64(TOSQ(move)), to_str));
+				if (!check_game_over(&chess_board)) {
+					enable_take_back_button();
+				}
+				is_ai_thinking = false;
+				osMutexRelease(lvgl_mutex);
 			}
-
-			show_spinning = true;
-			int move = calc_engine_move(&chess_board, SEARCH_DEPTH, SEARCH_TIMEOUT);
-
-			osMutexWait(lvgl_mutex, osWaitForever);
-
-			show_spinning = false;
-			MakeMove(&chess_board, move);
-			render_board_state();
-			printf("AI : %s to %s\n",
-					sq64_to_str(SQ64(FROMSQ(move)), from_str),
-					sq64_to_str(SQ64(TOSQ(move)), to_str));
-			if (check_game_over(&chess_board)) {
-				printf("Game Over!\n");
-			}
-			is_ai_thinking = false;
-			take_back_requested = false;
-			osMutexRelease(lvgl_mutex);
 		}
 	}
   /* USER CODE END StartChessTask */

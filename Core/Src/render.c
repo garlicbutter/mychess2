@@ -16,6 +16,8 @@ static uint8_t imgbuf1[ILI9341_LCD_PIXEL_WIDTH * ILI9341_LCD_PIXEL_HEIGHT / 15 *
 // local stuff
 static lv_obj_t *visual_pieces[64]= { NULL };
 static lv_obj_t * move_markers[64]= { NULL };
+static void trigger_engine_to_make_move();
+static void trigger_take_back(int n);
 
 void render_init(void) {
 //	LVGL init
@@ -58,7 +60,7 @@ void action_start_game_cb(lv_event_t * e) {
             }
         }
         lv_scr_load_anim(objects.game_screen, LV_SCR_LOAD_ANIM_FADE_ON, 300, 0, false);
-        osSignalSet(registerChessTaskHandle, EngineInit);
+        osSignalSet(registerChessTaskHandle, ChessInitSignal);
     }
 }
 
@@ -90,10 +92,16 @@ void render_board_state(void) {
 				lv_obj_add_event_cb(visual_pieces[sq64], drag_event_cb,
 						LV_EVENT_ALL, (void*) (intptr_t) sq64);
 			}
-			if (PieceCol[engine_piece] == WHITE) {
+			if (current_game_mode == MODE_PVP) {
 				lv_obj_add_flag(visual_pieces[sq64], LV_OBJ_FLAG_CLICKABLE);
-			} else {
-				lv_obj_clear_flag(visual_pieces[sq64], LV_OBJ_FLAG_CLICKABLE);
+			} else if (current_game_mode == MODE_PVE){
+				int piece_color = PieceCol[engine_piece];
+				if ((user_color == PLAY_WHITE && piece_color == WHITE) ||
+					(user_color == PLAY_BLACK && piece_color == BLACK)) {
+					lv_obj_add_flag(visual_pieces[sq64], LV_OBJ_FLAG_CLICKABLE);
+				} else {
+					lv_obj_clear_flag(visual_pieces[sq64], LV_OBJ_FLAG_CLICKABLE);
+				}
 			}
 
 			/* Update the sprite image (handles pawn promotions automatically!) */
@@ -172,25 +180,13 @@ void drag_event_cb(lv_event_t *e) {
 			printf("You: %s to %s\n",
 					sq64_to_str(from_sq64, from_str),
 					sq64_to_str(to_sq64, to_str));
-
 			render_board_state();
-
-			/* Did the human just checkmate the AI? */
-			if (check_game_over(&chess_board)) {
-				printf("Game Over!\n");
-			} else {
-				/* AI's Turn */
-				if (registerChessTaskHandle != NULL) {
-					is_ai_thinking = true;
-					take_back_requested = false;
-					osSignalSet(registerChessTaskHandle, EngineNextMove);
+			if (!check_game_over(&chess_board)) {
+				if (current_game_mode == MODE_PVE) {
+					trigger_engine_to_make_move();
 				}
 			}
-
 		} else {
-//			if (from_sq120 != to_sq120) {
-//				printf("Illegal Move\n");
-//			}
 			render_board_state();
 		}
 	}
@@ -353,6 +349,13 @@ void show_stalemate(void) {
         lv_obj_clear_flag(objects.stalemate, LV_OBJ_FLAG_HIDDEN);
     }
 }
+
+void enable_take_back_button(void) {
+    if (objects.test_button != NULL) {
+    	lv_obj_clear_state(objects.test_button, LV_STATE_DISABLED);
+    }
+}
+
 void disable_take_back_button(void) {
     if (objects.test_button != NULL) {
     	lv_obj_add_state(objects.test_button, LV_STATE_DISABLED);
@@ -376,11 +379,17 @@ void update_memory_bars(void) {
 }
 
 void action_test_button_callback(lv_event_t *e) {
+	if (is_ai_thinking) {
+		return;
+	}
 	lv_event_code_t code = lv_event_get_code(e);
 	if (code == LV_EVENT_CLICKED) {
 		if (registerChessTaskHandle != NULL) {
-			take_back_requested = true;
-			osSignalSet(registerChessTaskHandle, 0x01);
+			if (current_game_mode == MODE_PVP) {
+				trigger_take_back(1);
+			} else if (current_game_mode == MODE_PVE) {
+				trigger_take_back(2);
+			}
 		}
 	}
 }
@@ -438,3 +447,17 @@ void show_move_markers(int from_sq120) {
 	}
 }
 
+static void trigger_engine_to_make_move() {
+	if (registerChessTaskHandle != NULL) {
+		is_ai_thinking = true;
+		osSignalSet(registerChessTaskHandle, ChessEngineNextMoveSignal);
+	}
+}
+
+static void trigger_take_back(int n) {
+	if (n == 0) return;
+	if (registerChessTaskHandle != NULL) {
+		take_back_requested+=n;
+		osSignalSet(registerChessTaskHandle, ChessTakeBackSignal);
+	}
+}

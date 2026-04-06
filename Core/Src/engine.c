@@ -143,6 +143,7 @@ int check_game_over(S_BOARD *board) {
     
     // No legal moves exist for the current side
     if (legal_moves_found == 0) {
+		printf("Game Over!\n");
         int InCheck = SqAttacked(board->KingSq[board->side], board->side ^ 1, board);
         if (InCheck) {
             if (board->side == WHITE) {
@@ -161,12 +162,11 @@ int check_game_over(S_BOARD *board) {
         }
         return 1; // Game Over
     } 
-    
     if (board->fiftyMove >= 100) {
+    	show_stalemate();
         printf("\nDraw by Fifty-Move Rule!\n");
         return 1;
     }
-    
     // TODO:  handle Threefold Repetition
     return 0; // Game Continues
 }
