@@ -66,14 +66,13 @@ void render_board_state(void) {
 					printf("FATAL: LVGL Out of Memory!\n");
 					return;
 				}
-
-//				TODO: make black not draggable..
-//				if (PieceCol[engine_piece] == WHITE) {
-					lv_obj_add_flag(visual_pieces[sq64], LV_OBJ_FLAG_CLICKABLE);
-					/* Attach the drag callback, and pass its starting square as user_data */
-					lv_obj_add_event_cb(visual_pieces[sq64], drag_event_cb,
-							LV_EVENT_ALL, (void*) (intptr_t) sq64);
-//				}
+				lv_obj_add_event_cb(visual_pieces[sq64], drag_event_cb,
+						LV_EVENT_ALL, (void*) (intptr_t) sq64);
+			}
+			if (PieceCol[engine_piece] == WHITE) {
+				lv_obj_add_flag(visual_pieces[sq64], LV_OBJ_FLAG_CLICKABLE);
+			} else {
+				lv_obj_clear_flag(visual_pieces[sq64], LV_OBJ_FLAG_CLICKABLE);
 			}
 
 			/* Update the sprite image (handles pawn promotions automatically!) */
@@ -107,7 +106,7 @@ void drag_event_cb(lv_event_t *e) {
 		/* --- FINGER TOUCH DOWN --- */
 
 		int from_sq64 = (int) (intptr_t) lv_event_get_user_data(e);
-		lv_img_set_zoom(obj, 384);
+		lv_img_set_zoom(obj, 477);
 		show_move_markers(SQ120(from_sq64));
 		lv_obj_move_foreground(obj);
 
