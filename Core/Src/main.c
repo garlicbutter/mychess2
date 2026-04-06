@@ -642,13 +642,13 @@ void StartLvglTask(void const * argument)
 				update_memory_bars();
 			} else {
 				if (objects.bar_rtos != NULL) {
-					lv_obj_set_flag(objects.bar_rtos, LV_OBJ_FLAG_HIDDEN);
+					lv_obj_add_flag(objects.bar_rtos, LV_OBJ_FLAG_HIDDEN);
 				}
 				if (objects.label_rtos != NULL) {
-					lv_obj_set_flag(objects.label_rtos, LV_OBJ_FLAG_HIDDEN);
+					lv_obj_add_flag(objects.label_rtos, LV_OBJ_FLAG_HIDDEN);
 				}
 				if (objects.debug_terminal != NULL) {
-					lv_obj_set_flag(objects.debug_terminal, LV_OBJ_FLAG_HIDDEN);
+					lv_obj_add_flag(objects.debug_terminal, LV_OBJ_FLAG_HIDDEN);
 				}
 			}
 		}
