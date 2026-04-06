@@ -10,6 +10,7 @@
 GameMode_t current_game_mode = MODE_PVE;
 PlayerColor_t user_color = PLAY_WHITE;
 int ai_time_limit = 2000;
+int ai_search_limit = 6;
 
 static uint8_t imgbuf1[ILI9341_LCD_PIXEL_WIDTH * ILI9341_LCD_PIXEL_HEIGHT / 15 * BYTES_PER_PIXEL];
 static lv_obj_t *move_highlight_line = NULL;
@@ -61,10 +62,12 @@ void action_start_game_cb(lv_event_t * e) {
             case 0:
             	current_game_mode = MODE_PVE;
             	ai_time_limit = 100;
+            	ai_search_limit = 3;
             	break;
             case 1:
             	current_game_mode = MODE_PVE;
             	ai_time_limit = 5000;
+            	ai_search_limit = 6;
             	break;
             case 2:
             	current_game_mode = MODE_PVP;

@@ -60,6 +60,7 @@ typedef enum {
 extern GameMode_t current_game_mode;
 extern PlayerColor_t user_color;
 extern int ai_time_limit;
+extern int ai_search_limit;
 
 /* USER CODE END ET */
 
