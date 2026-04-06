@@ -61,7 +61,7 @@ void create_screen_start_screen() {
             objects.dropdown_mode = obj;
             lv_obj_set_pos(obj, 15, 223);
             lv_obj_set_size(obj, 124, LV_SIZE_CONTENT);
-            lv_dropdown_set_options(obj, "vs AI (easy)\nvs AI (hard)\nvs human");
+            lv_dropdown_set_options(obj, "vs. AI (easy)\nvs. AI (hard)\nvs. Human");
             lv_dropdown_set_selected(obj, 0);
         }
     }

@@ -344,7 +344,7 @@
               },
               "group": "",
               "groupIndex": 0,
-              "options": "vs AI (easy)\nvs AI (hard)\nvs human",
+              "options": "vs. AI (easy)\nvs. AI (hard)\nvs. Human",
               "optionsType": "literal",
               "selected": 0,
               "selectedType": "literal",
