@@ -4,6 +4,8 @@ A complete, standalone chess engine and graphical user interface running on a de
 
 # Demo video
 
+https://github.com/user-attachments/assets/1e4894f3-c020-421f-b1fa-864bd2fdbaac
+
 # Function
 
 This project splits the workload using FreeRTOS. One task manages the LVGL display and touchscreen inputs, while a background task runs the heavy chess tree calculations without blocking the user interface. 
