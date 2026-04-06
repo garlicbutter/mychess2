@@ -69,6 +69,7 @@ S_BOARD chess_board;
 volatile bool show_spinning = false;
 volatile bool user_button_flag = false;
 osThreadId registerChessTaskHandle = NULL;
+static bool show_debug_info = false;
 
 /* USER CODE END PV */
 
@@ -624,20 +625,35 @@ void StartLvglTask(void const * argument)
 			hide_loading_spinner();
 		}
 		if (user_button_flag){
-		    if (objects.bar_rtos != NULL) {
-		        lv_obj_clear_flag(objects.bar_rtos, LV_OBJ_FLAG_HIDDEN);
-		    }
-		    if (objects.label_rtos != NULL) {
-		        lv_obj_clear_flag(objects.label_rtos, LV_OBJ_FLAG_HIDDEN);
-		    }
-		    if (objects.debug_terminal != NULL) {
-		        lv_obj_clear_flag(objects.debug_terminal, LV_OBJ_FLAG_HIDDEN);
-		    }
-			print_rtos_stats();
-			update_memory_bars();
 			user_button_flag = false;
+
+			show_debug_info = ! show_debug_info;
+			if (show_debug_info) {
+				if (objects.bar_rtos != NULL) {
+					lv_obj_clear_flag(objects.bar_rtos, LV_OBJ_FLAG_HIDDEN);
+				}
+				if (objects.label_rtos != NULL) {
+					lv_obj_clear_flag(objects.label_rtos, LV_OBJ_FLAG_HIDDEN);
+				}
+				if (objects.debug_terminal != NULL) {
+					lv_obj_clear_flag(objects.debug_terminal, LV_OBJ_FLAG_HIDDEN);
+				}
+				print_rtos_stats();
+				update_memory_bars();
+			} else {
+				if (objects.bar_rtos != NULL) {
+					lv_obj_set_flag(objects.bar_rtos, LV_OBJ_FLAG_HIDDEN);
+				}
+				if (objects.label_rtos != NULL) {
+					lv_obj_set_flag(objects.label_rtos, LV_OBJ_FLAG_HIDDEN);
+				}
+				if (objects.debug_terminal != NULL) {
+					lv_obj_set_flag(objects.debug_terminal, LV_OBJ_FLAG_HIDDEN);
+				}
+			}
 		}
 
+		// debug buffer print
 		if (print_stream != NULL && printf_mutex != NULL) {
 			if (xSemaphoreTake(printf_mutex, portMAX_DELAY) == pdTRUE) {
 				size_t bytes_received = xStreamBufferReceive(print_stream, debug_buf, sizeof(debug_buf) - 1, 0);

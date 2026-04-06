@@ -49,7 +49,7 @@ void action_start_game_cb(lv_event_t * e) {
             switch (mode_idx) {
             case 0:
             	current_game_mode = MODE_PVE;
-            	ai_time_limit = 1000;
+            	ai_time_limit = 100;
             	break;
             case 1:
             	current_game_mode = MODE_PVE;
