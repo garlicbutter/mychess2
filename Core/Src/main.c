@@ -174,11 +174,11 @@ int main(void)
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
   /* definition and creation of lvglTask */
-  osThreadDef(lvglTask, StartLvglTask, osPriorityNormal, 0, 1536);
+  osThreadDef(lvglTask, StartLvglTask, osPriorityNormal, 0, 2048);
   lvglTaskHandle = osThreadCreate(osThread(lvglTask), NULL);
 
   /* definition and creation of chessTask */
-  osThreadDef(chessTask, StartChessTask, osPriorityBelowNormal, 0, 1536);
+  osThreadDef(chessTask, StartChessTask, osPriorityBelowNormal, 0, 2048);
   chessTaskHandle = osThreadCreate(osThread(chessTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */

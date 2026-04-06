@@ -157,7 +157,7 @@
 /** Stack size of drawing thread.
  * NOTE: If FreeType or ThorVG is enabled, it is recommended to set it to 32KB or more.
  */
-#define LV_DRAW_THREAD_STACK_SIZE    (8 * 1024)         /**< [bytes]*/
+#define LV_DRAW_THREAD_STACK_SIZE    (14 * 512)         /**< [bytes]*/
 
 /** Thread priority of the drawing task.
  *  Higher values mean higher priority.

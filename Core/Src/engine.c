@@ -31,13 +31,13 @@ int calc_engine_move(S_BOARD* board, int depth, int timeout_ms) {
 // very crude AI
 int random_engine_move(S_BOARD* board) {
     S_MOVELIST list[1];
-    board->ply = 0; // reset
 
     int legal_moves[256]; // Max possible chess moves in any position is ~218
     int legal_count = 0;
 
     GenerateAllMoves(board, list);
     for (int i = 0; i < list->count; ++i) {
+		board->ply = 0; // reset
         int move = list->moves[i].move;
         if (MakeMove(board, move)) {
             // The move is strictly legal! Undo it so we don't change the board state yet.
