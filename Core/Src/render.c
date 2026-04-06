@@ -14,11 +14,22 @@ int ai_time_limit = 2000;
 static uint8_t imgbuf1[ILI9341_LCD_PIXEL_WIDTH * ILI9341_LCD_PIXEL_HEIGHT / 15 * BYTES_PER_PIXEL];
 static lv_obj_t *move_highlight_line = NULL;
 
+#define CAPT_AREA_X 0
+#define CAPT_WHITE_Y 245  // Row for captured White pieces
+#define CAPT_BLACK_Y 265  // Row for captured Black pieces
+#define CAPT_PIECE_SIZE 15
+
 // local stuff
 static lv_obj_t *visual_pieces[64]= { NULL };
 static lv_obj_t * move_markers[64]= { NULL };
+static lv_obj_t *captured_visuals[40]; // Enough for all possible captures
 static void trigger_engine_to_make_move();
 static void trigger_take_back(int n);
+
+// Track counts for each color separately to handle alignment
+static int white_capt_count = 0;
+static int black_capt_count = 0;
+static int total_captured_count = 0;
 
 void render_init(void) {
 //	LVGL init
@@ -184,12 +195,16 @@ void drag_event_cb(lv_event_t *e) {
 
 		int to_sq64 = (target_rank * 8) + target_file;
 		int to_sq120 = SQ120(to_sq64);
+		int piece_on_target = chess_board.pieces[to_sq120];
 
 		if (check_human_move_valid(&chess_board, from_sq120, to_sq120)) {
 			char from_str[3], to_str[3];
 			printf("You: %s to %s\n",
 					sq64_to_str(from_sq64, from_str),
 					sq64_to_str(to_sq64, to_str));
+			if (piece_on_target != EMPTY && piece_on_target != OFFBOARD) {
+				add_captured_piece_visual(piece_on_target);
+			}
 			render_board_state();
 			if (!check_game_over(&chess_board)) {
 				if (current_game_mode == MODE_PVE) {
@@ -472,6 +487,12 @@ static void trigger_take_back(int n) {
 	}
 }
 
+void remove_move_arrow() {
+    if (move_highlight_line != NULL) {
+        lv_obj_del(move_highlight_line);
+        move_highlight_line = NULL;
+    }
+}
 
 void draw_move_arrow(int from_sq120, int to_sq120) {
     // 1. Remove previous arrow if it exists
@@ -507,4 +528,50 @@ void draw_move_arrow(int from_sq120, int to_sq120) {
 
     // Ensure it doesn't block clicks
     lv_obj_remove_flag(move_highlight_line, LV_OBJ_FLAG_CLICKABLE);
+}
+
+void add_captured_piece_visual(int engine_piece) {
+    if (engine_piece == EMPTY || total_captured_count >= 40) return;
+
+    lv_obj_t *cap_img = lv_img_create(objects.game_screen);
+    lv_img_set_src(cap_img, get_sprite(engine_piece));
+    lv_img_set_zoom(cap_img, 128); // 50% scale (15x15)
+
+    int piece_color = PieceCol[engine_piece];
+    int target_x = 0;
+    int target_y = 0;
+
+    if (piece_color == WHITE) {
+        target_x = CAPT_AREA_X + (white_capt_count * CAPT_PIECE_SIZE);
+        target_y = CAPT_WHITE_Y;
+        white_capt_count++;
+    } else {
+        target_x = CAPT_AREA_X + (black_capt_count * CAPT_PIECE_SIZE);
+        target_y = CAPT_BLACK_Y;
+        black_capt_count++;
+    }
+
+    lv_obj_set_pos(cap_img, target_x, target_y);
+
+    captured_visuals[total_captured_count++] = cap_img;
+}
+
+void pop_captured_piece_visual(void) {
+    if (total_captured_count > 0) {
+        total_captured_count--;
+        lv_obj_t *obj = captured_visuals[total_captured_count];
+
+        if (obj != NULL) {
+            // We need to decrement the specific color counter to keep the row aligned
+            // We can check the Y position to see which row it was in
+            if (lv_obj_get_y(obj) == CAPT_WHITE_Y) {
+                white_capt_count--;
+            } else {
+                black_capt_count--;
+            }
+
+            lv_obj_del(obj);
+            captured_visuals[total_captured_count] = NULL;
+        }
+    }
 }

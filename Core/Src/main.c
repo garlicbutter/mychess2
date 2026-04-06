@@ -631,12 +631,18 @@ void StartLvglTask(void const * argument)
 			if (show_debug_info) {
 				if (objects.bar_rtos != NULL) {
 					lv_obj_clear_flag(objects.bar_rtos, LV_OBJ_FLAG_HIDDEN);
+					lv_obj_move_foreground(objects.bar_rtos);
 				}
 				if (objects.label_rtos != NULL) {
 					lv_obj_clear_flag(objects.label_rtos, LV_OBJ_FLAG_HIDDEN);
+					lv_obj_move_foreground(objects.label_rtos);
 				}
 				if (objects.debug_terminal != NULL) {
 					lv_obj_clear_flag(objects.debug_terminal, LV_OBJ_FLAG_HIDDEN);
+					lv_obj_move_foreground(objects.debug_terminal);
+				}
+				if (objects.test_button != NULL) {
+					lv_obj_move_foreground(objects.test_button);
 				}
 				print_rtos_stats();
 				update_memory_bars();
@@ -716,10 +722,16 @@ void StartChessTask(void const * argument)
 							printf("take back!\n");
 						}
 						for (int i=0; i<moves_to_undo; i++) {
+							remove_move_arrow();
+							int last_move_captured = CAPTURED(chess_board.history[chess_board.hisPly - 1].move);
 							TakeMove(&chess_board);
+							if (last_move_captured) {
+								pop_captured_piece_visual();
+							}
 						}
 						render_board_state();
 					}
+					render_board_state();
 					take_back_requested = 0;
 					osMutexRelease(lvgl_mutex);
 				}
@@ -734,8 +746,16 @@ void StartChessTask(void const * argument)
 
 				int move = calc_engine_move(&chess_board, SEARCH_DEPTH, SEARCH_TIMEOUT);
 
+				int captured_sq = TOSQ(move);
+				int captured_piece = chess_board.pieces[captured_sq];
+
 				osMutexWait(lvgl_mutex, osWaitForever);
-				MakeMove(&chess_board, move);
+				if (MakeMove(&chess_board, move)) {
+					if (captured_piece != EMPTY) {
+						add_captured_piece_visual(captured_piece);
+						// TODO: actually en-passant doesn't work here.
+					}
+				}
 				render_board_state();
 				draw_move_arrow(FROMSQ(move), TOSQ(move));
 				show_spinning = false;
