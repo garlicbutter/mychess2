@@ -17,7 +17,6 @@ void init_chess_board(S_BOARD* board) {
 
 int calc_engine_move(S_BOARD* board, int depth, int timeout_ms) {
 	int move = 0;
-
 	move = smart_engine_move(board, depth, timeout_ms);
 
 	if (move == 0) {
@@ -32,13 +31,13 @@ int calc_engine_move(S_BOARD* board, int depth, int timeout_ms) {
 // very crude AI
 int random_engine_move(S_BOARD* board) {
     S_MOVELIST list[1];
+    board->ply = 0; // reset
+
     int legal_moves[256]; // Max possible chess moves in any position is ~218
     int legal_count = 0;
 
     GenerateAllMoves(board, list);
     for (int i = 0; i < list->count; ++i) {
-    	board->ply = 0; // Reset ply to prevent memory overflow
-
         int move = list->moves[i].move;
         if (MakeMove(board, move)) {
             // The move is strictly legal! Undo it so we don't change the board state yet.
@@ -81,7 +80,6 @@ int smart_engine_move(S_BOARD* board, int depth, int timeout_ms) {
 		info->timeset = FALSE;  // no timeout
     }
 
-    board->ply = 0;   // Reset your ply depth
     int best_move = SearchPosition(board, info);
 	printf("## D%d,N%ld,SC:%d\n",info->depth_searched, info->nodes, info->best_score);
 	return best_move;

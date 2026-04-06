@@ -8,8 +8,7 @@
 
 osThreadId registerChessTaskHandle = NULL;
 
-static uint8_t imgbuf1[ILI9341_LCD_PIXEL_WIDTH * ILI9341_LCD_PIXEL_HEIGHT / 10
-		* BYTES_PER_PIXEL];
+static uint8_t imgbuf1[ILI9341_LCD_PIXEL_WIDTH * ILI9341_LCD_PIXEL_HEIGHT / 15 * BYTES_PER_PIXEL];
 
 // local stuff
 static lv_obj_t *visual_pieces[64]= { NULL };

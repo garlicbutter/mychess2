@@ -3,6 +3,7 @@
 #include "stm32f4xx_hal.h"
 
 S_MOVELIST engine_move_lists[MAXDEPTH];
+S_MOVELIST quiescence_move_lists[MAXDEPTH];
 
 int GetTimeMs() {
 	return HAL_GetTick();
@@ -72,6 +73,55 @@ static void ScoreMoves(const S_BOARD *pos, S_MOVELIST *list, int depth) {
     }
 }
 
+static int Quiescence(int alpha, int beta, S_BOARD *pos, S_SEARCHINFO *info) {
+	ASSERT(CheckBoard(pos));
+	ASSERT(beta>alpha);
+    
+	if (ShouldStopSearch(info)) {
+		return 0;
+	}
+
+    info->nodes++;
+
+    int score = EvalPosition(pos);
+    if (pos->ply >= MAXDEPTH - 1) {
+        return score;
+    }
+
+    // Fail-hard beta cutoff for the static evaluation
+    if (score >= beta) {
+        return beta;
+    }
+    if (score > alpha) {
+        alpha = score;
+    }
+
+    // 3. Generate ONLY captures
+    // We use pos->ply to grab the correct statically allocated array so we don't blow the stack
+    S_MOVELIST *moves_list = &quiescence_move_lists[pos->ply];
+    GenerateAllCaps(pos, moves_list);
+
+    for (int i = 0; i < moves_list->count; ++i) {
+        PickNextMove(i, moves_list);
+
+        int move = moves_list->moves[i].move;
+
+        if (!MakeMove(pos, move)) {
+            continue;
+        }
+        score = -Quiescence(-beta, -alpha, pos, info);
+        TakeMove(pos);
+        if (score > alpha) {
+			if (score >= beta) {
+				return beta;
+			}
+            alpha = score;
+        }
+    }
+
+    return alpha;
+}
+
 static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO *info) {
 	//	alpha: lower bound, what's the worst move I can play
 	//	beta: upper bound, opponent's best score.
@@ -87,7 +137,8 @@ static int AlphaBeta(int alpha, int beta, int depth, S_BOARD *pos, S_SEARCHINFO 
 
     // BASE CASE (Depth limit reached):
 	if (depth == 0) {
-		return EvalPosition(pos); // TODO: swap this out for a "Quiescence Search"
+		return Quiescence(alpha, beta, pos, info);
+//		return EvalPosition(pos);
 	}
 
 	info->nodes++;
@@ -153,6 +204,7 @@ int SearchPosition(S_BOARD *pos, S_SEARCHINFO *info) {
     int bestScore = -INFINITE;
     int PvMove = 0;
 
+    pos->ply = 0;
     info->best_score = 0;
     info->stopped = FALSE;
     info->nodes = 0;

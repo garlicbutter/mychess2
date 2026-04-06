@@ -174,11 +174,11 @@ int main(void)
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
   /* definition and creation of lvglTask */
-  osThreadDef(lvglTask, StartLvglTask, osPriorityNormal, 0, 2048);
+  osThreadDef(lvglTask, StartLvglTask, osPriorityNormal, 0, 1536);
   lvglTaskHandle = osThreadCreate(osThread(lvglTask), NULL);
 
   /* definition and creation of chessTask */
-  osThreadDef(chessTask, StartChessTask, osPriorityBelowNormal, 0, 2048);
+  osThreadDef(chessTask, StartChessTask, osPriorityBelowNormal, 0, 1536);
   chessTaskHandle = osThreadCreate(osThread(chessTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
@@ -667,8 +667,8 @@ void StartChessTask(void const * argument)
 	osMutexRelease(lvgl_mutex);
 
 	char from_str[3], to_str[3];
-	const int SEARCH_DEPTH = 7;
-	const int SEARCH_TIMEOUT = 4000;
+	const int SEARCH_DEPTH = 6;
+	const int SEARCH_TIMEOUT = 3000;
 
 	/* Infinite loop */
 	for (;;) {
