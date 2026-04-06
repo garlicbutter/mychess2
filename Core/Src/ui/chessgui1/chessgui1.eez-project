@@ -467,7 +467,15 @@
                 "childStyles": []
               },
               "timeline": [],
-              "eventHandlers": [],
+              "eventHandlers": [
+                {
+                  "objID": "c8d20faf-ec48-435d-b957-50e002238f4c",
+                  "eventName": "CLICKED",
+                  "handlerType": "action",
+                  "action": "test_button_callback",
+                  "userData": 0
+                }
+              ],
               "identifier": "test_button",
               "leftUnit": "px",
               "topUnit": "px",
@@ -490,15 +498,7 @@
                     "childStyles": []
                   },
                   "timeline": [],
-                  "eventHandlers": [
-                    {
-                      "objID": "df9fdc90-9fb4-42a1-9f61-7be17933b815",
-                      "eventName": "CLICKED",
-                      "handlerType": "action",
-                      "action": "test_button_callback",
-                      "userData": 0
-                    }
-                  ],
+                  "eventHandlers": [],
                   "identifier": "",
                   "leftUnit": "px",
                   "topUnit": "px",
