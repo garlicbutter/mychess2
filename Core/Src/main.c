@@ -624,12 +624,15 @@ void StartLvglTask(void const * argument)
 			hide_loading_spinner();
 		}
 		if (user_button_flag){
-		    if (objects.bar_rtos != NULL)
+		    if (objects.bar_rtos != NULL) {
 		        lv_obj_clear_flag(objects.bar_rtos, LV_OBJ_FLAG_HIDDEN);
-		    if (objects.label_rtos != NULL)
+		    }
+		    if (objects.label_rtos != NULL) {
 		        lv_obj_clear_flag(objects.label_rtos, LV_OBJ_FLAG_HIDDEN);
-		    if (objects.debug_terminal != NULL)
+		    }
+		    if (objects.debug_terminal != NULL) {
 		        lv_obj_clear_flag(objects.debug_terminal, LV_OBJ_FLAG_HIDDEN);
+		    }
 			print_rtos_stats();
 			update_memory_bars();
 			user_button_flag = false;
@@ -718,6 +721,7 @@ void StartChessTask(void const * argument)
 				osMutexWait(lvgl_mutex, osWaitForever);
 				MakeMove(&chess_board, move);
 				render_board_state();
+				draw_move_arrow(FROMSQ(move), TOSQ(move));
 				show_spinning = false;
 				printf("AI : %s to %s\n",
 						sq64_to_str(SQ64(FROMSQ(move)), from_str),

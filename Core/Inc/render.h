@@ -46,6 +46,7 @@ void update_debug_terminal(const char* new_text);
 void clear_move_markers(void);
 void show_move_markers(int from_sq120);
 
+void draw_move_arrow(int from_sq120, int to_sq120);
 void show_white_victory(void);
 void show_white_defeat(void);
 void show_stalemate(void);

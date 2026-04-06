@@ -12,6 +12,7 @@ PlayerColor_t user_color = PLAY_WHITE;
 int ai_time_limit = 2000;
 
 static uint8_t imgbuf1[ILI9341_LCD_PIXEL_WIDTH * ILI9341_LCD_PIXEL_HEIGHT / 15 * BYTES_PER_PIXEL];
+static lv_obj_t *move_highlight_line = NULL;
 
 // local stuff
 static lv_obj_t *visual_pieces[64]= { NULL };
@@ -133,6 +134,10 @@ void drag_event_cb(lv_event_t *e) {
 
 	if (code == LV_EVENT_PRESSED) {
 		/* --- FINGER TOUCH DOWN --- */
+		if (move_highlight_line != NULL) {
+			lv_obj_del(move_highlight_line);
+			move_highlight_line = NULL;
+		}
 
 		int from_sq64 = (int) (intptr_t) lv_event_get_user_data(e);
 		lv_img_set_zoom(obj, 477);
@@ -460,4 +465,41 @@ static void trigger_take_back(int n) {
 		take_back_requested+=n;
 		osSignalSet(registerChessTaskHandle, ChessTakeBackSignal);
 	}
+}
+
+
+void draw_move_arrow(int from_sq120, int to_sq120) {
+    // 1. Remove previous arrow if it exists
+    if (move_highlight_line != NULL) {
+        lv_obj_del(move_highlight_line);
+        move_highlight_line = NULL;
+    }
+
+    // 2. Convert SQ120 to SQ64
+    int f64 = SQ64(from_sq120);
+    int t64 = SQ64(to_sq120);
+
+    // 3. Calculate Centers
+    // X = file * size + half_size
+    // Y = (7 - rank) * size + half_size
+    static lv_point_precise_t line_points[2];
+
+    line_points[0].x = (f64 % 8) * SQUARE_SIZE + (SQUARE_SIZE / 2);
+    line_points[0].y = (7 - (f64 / 8)) * SQUARE_SIZE + (SQUARE_SIZE / 2);
+
+    line_points[1].x = (t64 % 8) * SQUARE_SIZE + (SQUARE_SIZE / 2);
+    line_points[1].y = (7 - (t64 / 8)) * SQUARE_SIZE + (SQUARE_SIZE / 2);
+
+    // 4. Create Line Object
+    move_highlight_line = lv_line_create(objects.chessboard);
+    lv_line_set_points(move_highlight_line, line_points, 2);
+
+    // 5. Style the line (Yellow/Orange with some transparency works best)
+    lv_obj_set_style_line_width(move_highlight_line, 4, 0);
+    lv_obj_set_style_line_color(move_highlight_line, lv_palette_main(LV_PALETTE_ORANGE), 0);
+    lv_obj_set_style_line_opa(move_highlight_line, LV_OPA_60, 0);
+    lv_obj_set_style_line_rounded(move_highlight_line, true, 0);
+
+    // Ensure it doesn't block clicks
+    lv_obj_remove_flag(move_highlight_line, LV_OBJ_FLAG_CLICKABLE);
 }
