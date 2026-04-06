@@ -2,8 +2,7 @@
 
 A complete, standalone chess engine and graphical user interface running on a deeply constrained microcontroller. This project combines a custom hardware-optimized Alpha-Beta search algorithm with a modern touchscreen UI, utilizing a Real-Time Operating System to handle concurrent engine calculation and graphical rendering.
 
-# Demo
-<video controls src="assets/mychess.mp4" title="Title"></video>
+# Demo video
 
 # Function
 
