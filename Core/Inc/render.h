@@ -25,7 +25,8 @@ LV_IMG_DECLARE(img_queen_b)
 LV_IMG_DECLARE(img_king_b)
 LV_IMG_DECLARE(img_red_dot)
 
-
+extern volatile bool is_ai_thinking;
+extern volatile bool take_back_requested;
 
 void render_init(void);
 void render_board_state(void);

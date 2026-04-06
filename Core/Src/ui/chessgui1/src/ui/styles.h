@@ -22,6 +22,16 @@ lv_style_t *get_style_greenline_MAIN_DEFAULT();
 void add_style_greenline(lv_obj_t *obj);
 void remove_style_greenline(lv_obj_t *obj);
 
+// Style: start_button
+lv_style_t *get_style_start_button_MAIN_DEFAULT();
+void add_style_start_button(lv_obj_t *obj);
+void remove_style_start_button(lv_obj_t *obj);
+
+// Style: start_text
+lv_style_t *get_style_start_text_MAIN_DEFAULT();
+void add_style_start_text(lv_obj_t *obj);
+void remove_style_start_text(lv_obj_t *obj);
+
 #ifdef __cplusplus
 }
 #endif

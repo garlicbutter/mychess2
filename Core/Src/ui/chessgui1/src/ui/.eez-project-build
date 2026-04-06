@@ -19,6 +19,7 @@
     "ui_image_king_w.c",
     "ui_image_knight_b.c",
     "ui_image_knight_w.c",
+    "ui_image_main_page.c",
     "ui_image_pawn_b.c",
     "ui_image_pawn_w.c",
     "ui_image_queen_b.c",

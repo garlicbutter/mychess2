@@ -22,22 +22,64 @@ lv_obj_t *tick_value_change_obj;
 // Screens
 //
 
-void create_screen_main() {
+void create_screen_start_screen() {
     lv_obj_t *obj = lv_obj_create(0);
-    objects.main = obj;
+    objects.start_screen = obj;
+    lv_obj_set_pos(obj, 0, 0);
+    lv_obj_set_size(obj, 240, 320);
+    {
+        lv_obj_t *parent_obj = obj;
+        {
+            lv_obj_t *obj = lv_image_create(parent_obj);
+            lv_obj_set_pos(obj, -2, -1);
+            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+            lv_image_set_src(obj, &img_main_page);
+        }
+        {
+            // start_button
+            lv_obj_t *obj = lv_button_create(parent_obj);
+            objects.start_button = obj;
+            lv_obj_set_pos(obj, 146, 223);
+            lv_obj_set_size(obj, 73, 37);
+            lv_obj_add_event_cb(obj, action_start_game_cb, LV_EVENT_CLICKED, (void *)0);
+            add_style_start_button(obj);
+            {
+                lv_obj_t *parent_obj = obj;
+                {
+                    lv_obj_t *obj = lv_label_create(parent_obj);
+                    lv_obj_set_pos(obj, 0, 0);
+                    lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                    add_style_start_text(obj);
+                    lv_obj_set_style_align(obj, LV_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+                    lv_label_set_text(obj, "Start");
+                }
+            }
+        }
+        {
+            // dropdown_mode
+            lv_obj_t *obj = lv_dropdown_create(parent_obj);
+            objects.dropdown_mode = obj;
+            lv_obj_set_pos(obj, 15, 223);
+            lv_obj_set_size(obj, 124, LV_SIZE_CONTENT);
+            lv_dropdown_set_options(obj, "vs AI (easy)\nvs AI (hard)\nvs human");
+            lv_dropdown_set_selected(obj, 0);
+        }
+    }
+    
+    tick_screen_start_screen();
+}
+
+void tick_screen_start_screen() {
+}
+
+void create_screen_game_screen() {
+    lv_obj_t *obj = lv_obj_create(0);
+    objects.game_screen = obj;
     lv_obj_set_pos(obj, 0, 0);
     lv_obj_set_size(obj, 240, 320);
     lv_obj_remove_flag(obj, LV_OBJ_FLAG_PRESS_LOCK|LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SNAPPABLE|LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM|LV_OBJ_FLAG_SCROLL_CHAIN_HOR|LV_OBJ_FLAG_SCROLL_CHAIN_VER);
     {
         lv_obj_t *parent_obj = obj;
-        {
-            // chessboard
-            lv_obj_t *obj = lv_image_create(parent_obj);
-            objects.chessboard = obj;
-            lv_obj_set_pos(obj, 0, 0);
-            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-            lv_image_set_src(obj, &img_board);
-        }
         {
             // debug_terminal
             lv_obj_t *obj = lv_textarea_create(parent_obj);
@@ -62,17 +104,11 @@ void create_screen_main() {
                     lv_obj_t *obj = lv_label_create(parent_obj);
                     lv_obj_set_pos(obj, 0, 0);
                     lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                    lv_obj_add_event_cb(obj, action_test_button_callback, LV_EVENT_CLICKED, (void *)0);
                     lv_obj_set_style_align(obj, LV_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
                     lv_label_set_text(obj, "take\nback");
                 }
             }
-        }
-        {
-            // loading_board
-            lv_obj_t *obj = lv_spinner_create(parent_obj);
-            objects.loading_board = obj;
-            lv_obj_set_pos(obj, 45, 28);
-            lv_obj_set_size(obj, 151, 185);
         }
         {
             // bar_rtos
@@ -100,17 +136,33 @@ void create_screen_main() {
             lv_image_set_src(obj, &img_crown);
             lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
         }
+        {
+            // chessboard
+            lv_obj_t *obj = lv_image_create(parent_obj);
+            objects.chessboard = obj;
+            lv_obj_set_pos(obj, 0, 0);
+            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+            lv_image_set_src(obj, &img_board);
+        }
+        {
+            // loading_board
+            lv_obj_t *obj = lv_spinner_create(parent_obj);
+            objects.loading_board = obj;
+            lv_obj_set_pos(obj, 45, 28);
+            lv_obj_set_size(obj, 151, 185);
+        }
     }
     
-    tick_screen_main();
+    tick_screen_game_screen();
 }
 
-void tick_screen_main() {
+void tick_screen_game_screen() {
 }
 
 typedef void (*tick_screen_func_t)();
 tick_screen_func_t tick_screen_funcs[] = {
-    tick_screen_main,
+    tick_screen_start_screen,
+    tick_screen_game_screen,
 };
 void tick_screen(int screen_index) {
     tick_screen_funcs[screen_index]();
@@ -208,5 +260,6 @@ void create_screens() {
     
     // Initialize screens
     // Create screens
-    create_screen_main();
+    create_screen_start_screen();
+    create_screen_game_screen();
 }

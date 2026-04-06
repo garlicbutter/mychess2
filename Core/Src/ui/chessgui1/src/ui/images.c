@@ -1,6 +1,6 @@
 #include "images.h"
 
-const ext_img_desc_t images[15] = {
+const ext_img_desc_t images[16] = {
     { "knight_w", &img_knight_w },
     { "board", &img_board },
     { "bishop_w", &img_bishop_w },
@@ -16,4 +16,5 @@ const ext_img_desc_t images[15] = {
     { "rook_b", &img_rook_b },
     { "red_dot", &img_red_dot },
     { "crown", &img_crown },
+    { "main_page", &img_main_page },
 };

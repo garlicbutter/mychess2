@@ -39,8 +39,27 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-extern volatile bool is_ai_thinking;
-extern volatile bool take_back_requested;
+
+typedef enum {
+    MODE_PVE, // Player vs Engine
+    MODE_PVP  // Player vs Player
+} GameMode_t;
+
+typedef enum {
+    PLAY_WHITE,
+    PLAY_BLACK
+} PlayerColor_t;
+
+typedef enum {
+	EngineInit=0x01,
+    EngineNextMove,
+} EngineSignal_t;
+
+
+extern GameMode_t current_game_mode;
+extern PlayerColor_t user_color;
+extern int ai_time_limit;
+
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/

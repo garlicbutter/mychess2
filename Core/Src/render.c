@@ -2,18 +2,20 @@
 #include "main.h"
 #include "engine.h"
 #include "render.h"
+#include "actions.h" // gui action hooks
 
 #define BYTES_PER_PIXEL (LV_COLOR_DEPTH / 8)
 #define SQUARE_SIZE 30 // Assuming your resized 30x30 pieces
 
-osThreadId registerChessTaskHandle = NULL;
+GameMode_t current_game_mode = MODE_PVE;
+PlayerColor_t user_color = PLAY_WHITE;
+int ai_time_limit = 2000;
 
 static uint8_t imgbuf1[ILI9341_LCD_PIXEL_WIDTH * ILI9341_LCD_PIXEL_HEIGHT / 15 * BYTES_PER_PIXEL];
 
 // local stuff
 static lv_obj_t *visual_pieces[64]= { NULL };
 static lv_obj_t * move_markers[64]= { NULL };
-static void test_button_callback(lv_event_t *e);
 
 void render_init(void) {
 //	LVGL init
@@ -33,12 +35,31 @@ void render_init(void) {
 
 //	ui (build from eez studio)
 	ui_init();
+}
 
-//	add component callbacks
-	if (objects.test_button != NULL) {
-		lv_obj_add_event_cb(objects.test_button, test_button_callback,
-				LV_EVENT_ALL, NULL);
-	}
+void action_start_game_cb(lv_event_t * e) {
+    lv_event_code_t code = lv_event_get_code(e);
+
+    if(code == LV_EVENT_CLICKED) {
+        if (objects.dropdown_mode != NULL) {
+            uint16_t mode_idx = lv_dropdown_get_selected(objects.dropdown_mode);
+            switch (mode_idx) {
+            case 0:
+            	current_game_mode = MODE_PVE;
+            	ai_time_limit = 1000;
+            	break;
+            case 1:
+            	current_game_mode = MODE_PVE;
+            	ai_time_limit = 5000;
+            	break;
+            case 2:
+            	current_game_mode = MODE_PVP;
+            	break;
+            }
+        }
+        lv_scr_load_anim(objects.game_screen, LV_SCR_LOAD_ANIM_FADE_ON, 300, 0, false);
+        osSignalSet(registerChessTaskHandle, EngineInit);
+    }
 }
 
 void render_board_state(void) {
@@ -162,7 +183,7 @@ void drag_event_cb(lv_event_t *e) {
 				if (registerChessTaskHandle != NULL) {
 					is_ai_thinking = true;
 					take_back_requested = false;
-					osSignalSet(registerChessTaskHandle, 0x01);
+					osSignalSet(registerChessTaskHandle, EngineNextMove);
 				}
 			}
 
@@ -339,7 +360,7 @@ void update_memory_bars(void) {
 	}
 }
 
-void test_button_callback(lv_event_t *e) {
+void action_test_button_callback(lv_event_t *e) {
 	lv_event_code_t code = lv_event_get_code(e);
 	if (code == LV_EVENT_CLICKED) {
 		if (registerChessTaskHandle != NULL) {

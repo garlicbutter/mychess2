@@ -68,6 +68,7 @@ osMutexId lvgl_mutex;
 S_BOARD chess_board;
 volatile bool show_spinning = true;
 volatile bool user_button_flag = false;
+osThreadId registerChessTaskHandle = NULL;
 
 /* USER CODE END PV */
 
@@ -660,6 +661,7 @@ void StartChessTask(void const * argument)
 	init_chess_board(&chess_board);
 	printf("init_chess_board\n");
 	
+	osSignalWait(EngineInit, osWaitForever);
 	osMutexWait(lvgl_mutex, osWaitForever);
 	show_spinning = false;
 	render_board_state(); // render initial board
@@ -668,11 +670,11 @@ void StartChessTask(void const * argument)
 
 	char from_str[3], to_str[3];
 	const int SEARCH_DEPTH = 6;
-	const int SEARCH_TIMEOUT = 3000;
+	const int SEARCH_TIMEOUT = ai_time_limit;
 
 	/* Infinite loop */
 	for (;;) {
-		osEvent evt = osSignalWait(0x01, osWaitForever);
+		osEvent evt = osSignalWait(EngineNextMove, osWaitForever);
 
 		if (evt.status == osEventSignal) {
 			if (take_back_requested) {

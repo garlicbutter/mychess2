@@ -7,6 +7,9 @@
 extern "C" {
 #endif
 
+extern void action_start_game_cb(lv_event_t * e);
+extern void action_test_button_callback(lv_event_t * e);
+
 #ifdef __cplusplus
 }
 #endif
