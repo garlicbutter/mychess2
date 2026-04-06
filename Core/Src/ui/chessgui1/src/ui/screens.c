@@ -89,6 +89,7 @@ void create_screen_game_screen() {
             lv_textarea_set_max_length(obj, 256);
             lv_textarea_set_one_line(obj, false);
             lv_textarea_set_password_mode(obj, false);
+            lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
             lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICK_FOCUSABLE|LV_OBJ_FLAG_SCROLL_ELASTIC|LV_OBJ_FLAG_SCROLL_MOMENTUM);
         }
         {
@@ -116,6 +117,7 @@ void create_screen_game_screen() {
             objects.bar_rtos = obj;
             lv_obj_set_pos(obj, 0, 312);
             lv_obj_set_size(obj, 241, 8);
+            lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
             lv_obj_remove_flag(obj, LV_OBJ_FLAG_CLICKABLE);
             add_style_green(obj);
         }
@@ -125,6 +127,7 @@ void create_screen_game_screen() {
             objects.label_rtos = obj;
             lv_obj_set_pos(obj, 7, 306);
             lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+            lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
             lv_label_set_text(obj, "rtos");
         }
         {
