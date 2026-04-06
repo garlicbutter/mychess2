@@ -37,8 +37,6 @@ void update_memory_bars(void);
 void show_loading_spinner(void);
 void hide_loading_spinner(void);
 
-void show_crown(void);
-
 void drag_event_cb(lv_event_t *e);
 void my_flush_cb(lv_display_t *display, const lv_area_t *area, uint8_t *px_map);
 const void* get_sprite(int vice_piece);
@@ -47,6 +45,12 @@ void update_debug_terminal(const char* new_text);
 
 void clear_move_markers(void);
 void show_move_markers(int from_sq120);
+
+void show_white_victory(void);
+void show_white_defeat(void);
+void show_stalemate(void);
+
+void disable_take_back_button(void);
 
 extern osThreadId registerChessTaskHandle;
 extern osMutexId lvgl_mutex;

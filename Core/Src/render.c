@@ -338,9 +338,24 @@ void hide_loading_spinner(void) {
     }
 }
 
-void show_crown(void) {
-    if (objects.crown != NULL) {
-        lv_obj_clear_flag(objects.crown, LV_OBJ_FLAG_HIDDEN);
+void show_white_victory(void) {
+    if (objects.white_victory != NULL) {
+        lv_obj_clear_flag(objects.white_victory, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+void show_white_defeat(void) {
+    if (objects.white_defeat != NULL) {
+        lv_obj_clear_flag(objects.white_defeat, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+void show_stalemate(void) {
+    if (objects.stalemate != NULL) {
+        lv_obj_clear_flag(objects.stalemate, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+void disable_take_back_button(void) {
+    if (objects.test_button != NULL) {
+    	lv_obj_add_state(objects.test_button, LV_STATE_DISABLED);
     }
 }
 

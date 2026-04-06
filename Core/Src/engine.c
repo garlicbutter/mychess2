@@ -147,12 +147,17 @@ int check_game_over(S_BOARD *board) {
         if (InCheck) {
             if (board->side == WHITE) {
                 printf("\nCheckmate! Black wins!\n");
+                show_white_defeat();
+                disable_take_back_button();
             } else {
                 printf("\nCheckmate! White wins!\n");
-                show_crown();
+                show_white_victory();
+                disable_take_back_button();
             }
         } else {
             printf("\nSTALEMATE! Game is a Draw!\n");
+            show_stalemate();
+            disable_take_back_button();
         }
         return 1; // Game Over
     } 

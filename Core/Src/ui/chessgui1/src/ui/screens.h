@@ -25,9 +25,11 @@ typedef struct _objects_t {
     lv_obj_t *test_button;
     lv_obj_t *bar_rtos;
     lv_obj_t *label_rtos;
-    lv_obj_t *crown;
     lv_obj_t *chessboard;
     lv_obj_t *loading_board;
+    lv_obj_t *stalemate;
+    lv_obj_t *white_defeat;
+    lv_obj_t *white_victory;
 } objects_t;
 
 extern objects_t objects;

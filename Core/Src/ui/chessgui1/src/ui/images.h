@@ -21,8 +21,10 @@ extern const lv_img_dsc_t img_pawn_b;
 extern const lv_img_dsc_t img_queen_b;
 extern const lv_img_dsc_t img_rook_b;
 extern const lv_img_dsc_t img_red_dot;
-extern const lv_img_dsc_t img_crown;
 extern const lv_img_dsc_t img_main_page;
+extern const lv_img_dsc_t img_stalemate;
+extern const lv_img_dsc_t img_white_defeat;
+extern const lv_img_dsc_t img_white_victory;
 
 #ifndef EXT_IMG_DESC_T
 #define EXT_IMG_DESC_T
@@ -32,7 +34,7 @@ typedef struct _ext_img_desc_t {
 } ext_img_desc_t;
 #endif
 
-extern const ext_img_desc_t images[16];
+extern const ext_img_desc_t images[18];
 
 #ifdef __cplusplus
 }

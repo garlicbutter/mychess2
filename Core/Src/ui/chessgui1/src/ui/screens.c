@@ -128,15 +128,6 @@ void create_screen_game_screen() {
             lv_label_set_text(obj, "rtos");
         }
         {
-            // crown
-            lv_obj_t *obj = lv_image_create(parent_obj);
-            objects.crown = obj;
-            lv_obj_set_pos(obj, 21, 33);
-            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-            lv_image_set_src(obj, &img_crown);
-            lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
-        }
-        {
             // chessboard
             lv_obj_t *obj = lv_image_create(parent_obj);
             objects.chessboard = obj;
@@ -150,6 +141,33 @@ void create_screen_game_screen() {
             objects.loading_board = obj;
             lv_obj_set_pos(obj, 45, 28);
             lv_obj_set_size(obj, 151, 185);
+        }
+        {
+            // stalemate
+            lv_obj_t *obj = lv_image_create(parent_obj);
+            objects.stalemate = obj;
+            lv_obj_set_pos(obj, 86, 256);
+            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+            lv_image_set_src(obj, &img_stalemate);
+            lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
+        }
+        {
+            // white_defeat
+            lv_obj_t *obj = lv_image_create(parent_obj);
+            objects.white_defeat = obj;
+            lv_obj_set_pos(obj, 86, 241);
+            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+            lv_image_set_src(obj, &img_white_defeat);
+            lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
+        }
+        {
+            // white_victory
+            lv_obj_t *obj = lv_image_create(parent_obj);
+            objects.white_victory = obj;
+            lv_obj_set_pos(obj, 86, 227);
+            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+            lv_image_set_src(obj, &img_white_victory);
+            lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
         }
     }
     

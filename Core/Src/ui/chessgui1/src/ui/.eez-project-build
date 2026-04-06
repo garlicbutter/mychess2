@@ -14,7 +14,6 @@
     "ui_image_bishop_b.c",
     "ui_image_bishop_w.c",
     "ui_image_board.c",
-    "ui_image_crown.c",
     "ui_image_king_b.c",
     "ui_image_king_w.c",
     "ui_image_knight_b.c",
@@ -27,6 +26,9 @@
     "ui_image_red_dot.c",
     "ui_image_rook_b.c",
     "ui_image_rook_w.c",
+    "ui_image_stalemate.c",
+    "ui_image_white_defeat.c",
+    "ui_image_white_victory.c",
     "vars.h"
   ]
 }
