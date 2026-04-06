@@ -350,6 +350,7 @@ uint32_t render_timer_handler() {
 void show_loading_spinner(void) {
     if (objects.loading_board != NULL) {
         lv_obj_clear_flag(objects.loading_board, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_foreground(objects.loading_board);
     }
 }
 
@@ -362,16 +363,19 @@ void hide_loading_spinner(void) {
 void show_white_victory(void) {
     if (objects.white_victory != NULL) {
         lv_obj_clear_flag(objects.white_victory, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_foreground(objects.white_victory);
     }
 }
 void show_white_defeat(void) {
     if (objects.white_defeat != NULL) {
         lv_obj_clear_flag(objects.white_defeat, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_foreground(objects.white_defeat);
     }
 }
 void show_stalemate(void) {
     if (objects.stalemate != NULL) {
         lv_obj_clear_flag(objects.stalemate, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_foreground(objects.stalemate);
     }
 }
 
