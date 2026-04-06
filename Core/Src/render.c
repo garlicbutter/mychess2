@@ -68,6 +68,7 @@ void action_start_game_cb(lv_event_t * e) {
 void render_board_state(void) {
 	lv_obj_t *parent_panel = objects.chessboard;
 
+	bool flip_pieces = (current_game_mode == MODE_PVP && chess_board.side == BLACK);
 	for (int sq64 = 0; sq64 < 64; sq64++) {
 
 		/* Ask VICE what piece is on this square */
@@ -90,6 +91,7 @@ void render_board_state(void) {
 					printf("FATAL: LVGL Out of Memory!\n");
 					return;
 				}
+				lv_img_set_pivot(visual_pieces[sq64], SQUARE_SIZE / 2, SQUARE_SIZE / 2);
 				lv_obj_add_event_cb(visual_pieces[sq64], drag_event_cb,
 						LV_EVENT_ALL, (void*) (intptr_t) sq64);
 			}
@@ -105,10 +107,13 @@ void render_board_state(void) {
 				}
 			}
 
-			/* Update the sprite image (handles pawn promotions automatically!) */
-			lv_img_set_src(visual_pieces[sq64], get_sprite(engine_piece));
+			if (flip_pieces) {
+				lv_img_set_angle(visual_pieces[sq64], 1800); // 180.0 degrees
+			} else {
+				lv_img_set_angle(visual_pieces[sq64], 0);
+			}
 
-			/* Snap it to the correct pixel grid location */
+			lv_img_set_src(visual_pieces[sq64], get_sprite(engine_piece));
 			lv_obj_set_pos(visual_pieces[sq64], pixel_x, pixel_y);
 		}
 		/* If VICE says this square is empty */
