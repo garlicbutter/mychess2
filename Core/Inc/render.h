@@ -46,6 +46,7 @@ void update_debug_terminal(const char* new_text);
 void clear_move_markers(void);
 void show_move_markers(int from_sq120);
 
+void remove_move_arrow();
 void draw_move_arrow(int from_sq120, int to_sq120);
 void add_captured_piece_visual(int engine_piece);
 void pop_captured_piece_visual(void);
